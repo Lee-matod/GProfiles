@@ -1,0 +1,97 @@
+import "../assets/fonts/Roboto/Roboto-Regular.ttf";
+
+import { LineEdit, Button, StandardButton, TextEdit } from "std-widgets.slint";
+
+export enum EditableType { file, text }
+
+export component PrettyButton inherits Rectangle {
+    in property <image> icon;
+    in property <string> text;
+
+    width: 125px;
+    height: 30px;
+
+    border-radius: 5px;
+
+    animate background {
+        duration: 150ms;
+    }
+
+    Image {
+        x: 10px;
+        source: icon;
+    }
+
+    Text {
+        x: 35px;
+        text: text;
+        font-family: "Archivo Black";
+        font-size: 15px;
+    }
+}
+
+export component Title inherits Text {
+    color: #01a7e1;
+    font-family: "Archivo Black";
+    font-size: 15px;
+}
+
+export component EditableField inherits Rectangle {
+    callback clicked;
+
+    in-out property <string> title;
+    in-out property <string> field;
+    in property <EditableType> type;
+
+    property <physical-length> spacing: 650px;
+
+    width: spacing;
+    height: 65px;
+
+    Title {
+        x: 0px;
+        y: 0px;
+        text: title;
+    }
+
+    Rectangle {
+        width: spacing;
+        height: 25px;
+
+        border-radius: 5px;
+        background: #000000;
+
+        if root.type == EditableType.text : LineEdit {
+            x: 5px;
+            height: 20px;
+            width: spacing - 50px;
+
+            text <=> field;
+            font-size: 15px;
+        }        
+
+
+        if root.type == EditableType.file : Text {
+            x: 5px;
+            height: 20px;
+            width: spacing - 50px;
+
+            text: field;
+            color: #ffffff;
+            font-size: 15px;
+            font-family: "Roboto";
+        }
+
+        Image {
+            x: spacing - 25px;
+            colorize: #ffffff;
+            source: root.type == EditableType.text ? @image-url("../assets/material_icons/save_24.png") : @image-url("../assets/material_icons/edit_square_24.png");
+
+            TouchArea {
+                clicked => {
+                    root.clicked();
+                }
+            }
+        }
+    }
+}

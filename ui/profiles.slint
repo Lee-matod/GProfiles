@@ -1,0 +1,56 @@
+import "../assets/fonts/Roboto/Roboto-Regular.ttf";
+
+export struct ProfileSlint {
+    id: string,
+    name: string,
+    icon: image,
+    image-path: string,
+    executable: string,
+}
+
+export component ProfileView inherits Rectangle {
+    callback selected;
+    in property <ProfileSlint> profile;
+    in property <string> active;
+
+    area := TouchArea {
+        clicked => {
+            root.selected()
+        }
+    }
+    
+    width: profile.id == active ? 153px : 150px;
+    height: profile.id == active ? 213px : 210px;
+    
+    background: #3b3b3b;
+    border-radius: 5px;
+    border-width: area.has-hover || profile.id == active ? 5px : 0px;
+    border-color: #65c1ff;
+
+    animate width {
+        easing: ease-in;
+        duration: 150ms;
+    }
+
+    animate height {
+        easing: ease-in;
+        duration: 150ms;
+    }
+
+    animate border-width {
+        duration: 150ms;
+    }
+
+    Text {
+        y: 160px;
+        text: profile.name;
+        color: #ffffff;
+        font-size: 15px;
+        font-family: "Roboto Sans";
+        overflow: elide;
+    }
+
+    Image {
+        source: profile.icon;
+    }
+}

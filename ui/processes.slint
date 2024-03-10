@@ -1,0 +1,36 @@
+import "../assets/fonts/Roboto/Roboto-Regular.ttf";
+
+export struct ProcessSlint {
+    name: string,
+    executable: string,
+}
+
+export component ProcessView inherits Rectangle {
+    callback clicked(ProcessSlint);
+    
+    in property <ProcessSlint> process;
+
+    area := TouchArea {
+        clicked => {
+            root.clicked(root.process);
+        }
+    }
+
+    width: 200px;
+    height: 30px;
+
+    border-radius: 5px;
+    background: area.has-hover ? #707070 : #3b3b3b;
+
+    animate background {
+        duration: 150ms;
+    }
+
+    Text {
+        width: 180px;
+        text: process.name;
+        color: #ffffff;
+        overflow: elide;
+        font-family: "Roboto Sans";
+    }
+}
