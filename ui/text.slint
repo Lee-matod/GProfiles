@@ -82,12 +82,18 @@ export component EditableField inherits Rectangle {
             font-family: "Roboto";
         }
 
+        if root.type == EditableType.file : TouchArea {
+            clicked => {
+                root.clicked();
+            }
+        }
+
         Image {
             x: spacing - 25px;
             colorize: #ffffff;
             source: root.type == EditableType.text ? @image-url("../assets/material_icons/save_24.png") : @image-url("../assets/material_icons/edit_square_24.png");
 
-            TouchArea {
+            if root.type == EditableType.text : TouchArea {
                 clicked => {
                     root.clicked();
                 }
