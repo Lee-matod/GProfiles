@@ -3,14 +3,13 @@ use std::{error, path, process};
 use image::{imageops::FilterType, io::Reader as ImageReader, ImageFormat};
 use serde_json::Value;
 use slint::{ComponentHandle, SharedString};
-use sysinfo::System;
 use uuid::Uuid;
 
 use crate::callbacks::{
     on_add_app, on_exec_edit, on_forget_app, on_image_edit, on_name_edit, wrapper,
 };
 use crate::interface::Interface;
-use crate::processes::resolve_path;
+use crate::processes::{resolve_path, system};
 use crate::types::{Application, InnerApplications, InnerProfiles, JsonData, Profile};
 use crate::{AppWindow, ProfileSlint};
 
@@ -103,7 +102,7 @@ impl BackgroundHandler {
                 name: SharedString::from(&app.name),
                 executable: SharedString::from(&app.applicationPath.clone().unwrap()),
                 image_path: SharedString::from(&image_dir),
-                icon: icon,
+                icon,
             });
         }
         self.ui
@@ -246,10 +245,14 @@ impl BackgroundHandler {
             handler.commit(apps, Some(profiles))
         });
         self.ui.on_restart_ghub(move || {
-            let mut sys = System::new();
+            let mut sys = system();
             sys.refresh_processes();
             for (_, proc) in sys.processes() {
-                if proc.exe().unwrap().starts_with("C:\\Program Files\\LGHUB") {
+                let exec = proc.exe();
+                if exec.is_none() {
+                    continue;
+                }
+                if exec.unwrap().starts_with("C:\\Program Files\\LGHUB") {
                     proc.kill();
                 }
             }

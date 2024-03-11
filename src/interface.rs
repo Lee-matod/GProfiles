@@ -73,43 +73,42 @@ impl Interface {
 
     fn start_process_thread(&self) {
         let reference = self.ui.as_weak();
-        thread::spawn(move || loop {
-            let reference = reference.clone();
-            slint::invoke_from_event_loop(move || {
-                let ui = reference.unwrap();
-                let needle = ui.get_search_text();
+        thread::spawn(move || {
+            loop {
+                let reference = reference.clone();
+                slint::invoke_from_event_loop(move || {
+                    let ui = reference.unwrap();
+                    let needle = ui.get_search_text();
 
-                let running_processes = match get_processes(&needle.to_lowercase().as_str()) {
-                    Ok(p) => p,
-                    Err(_) => return,
-                };
-                let displayed_processes = ui.get_processes();
-                let displayed_profiles = ui.get_profiles();
+                    let running_processes = get_processes(&needle.to_lowercase().as_str());
+                    let displayed_processes = ui.get_processes();
+                    let displayed_profiles = ui.get_profiles();
 
-                let mut to_slint: Vec<ProcessSlint> = Vec::new();
-                for path in running_processes {
-                    if displayed_profiles
-                        .iter()
-                        .any(|p| p.executable.to_string() == path.to_string_lossy().to_string())
-                    {
-                        continue;
+                    let mut to_slint: Vec<ProcessSlint> = Vec::new();
+                    for path in running_processes {
+                        if displayed_profiles
+                            .iter()
+                            .any(|p| p.executable.to_string() == path.to_string_lossy().to_string())
+                        {
+                            continue;
+                        }
+                        to_slint.push(ProcessSlint {
+                            name: SharedString::from(
+                                path.file_name().unwrap().to_string_lossy().to_string(),
+                            ),
+                            executable: path.to_string_lossy().to_string().try_into().unwrap(),
+                        })
                     }
-                    to_slint.push(ProcessSlint {
-                        name: SharedString::from(
-                            path.file_name().unwrap().to_string_lossy().to_string(),
-                        ),
-                        executable: path.to_string_lossy().to_string().try_into().unwrap(),
-                    })
-                }
-                if to_slint.len() == displayed_processes.iter().len() {
-                    // No difference between displayed process list and actual process list.
-                    // We don't have to update the UI.
-                    return;
-                };
-                ui.set_processes(slint::ModelRc::new(slint::VecModel::from(to_slint)));
-            })
-            .unwrap();
-            thread::sleep(time::Duration::from_millis(100));
+                    if to_slint.len() == displayed_processes.iter().len() {
+                        // No difference between displayed process list and actual process list.
+                        // We don't have to update the UI.
+                        return;
+                    };
+                    ui.set_processes(slint::ModelRc::new(slint::VecModel::from(to_slint)));
+                })
+                .unwrap();
+                thread::sleep(time::Duration::from_millis(100));
+            }
         });
     }
 }

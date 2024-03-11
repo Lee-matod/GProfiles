@@ -9,7 +9,6 @@ build = "build.rs"
 
 [dependencies]
 image = "0.24.9"
-processes = "0.4.0"
 rfd = "0.14.0"
 rusqlite = { version = "0.31.0", features = ["serde_json", "bundled"] }
 serde = { version = "1.0.197", features = ["derive"] }

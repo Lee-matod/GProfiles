@@ -47,7 +47,7 @@ While I personally consider this project as finished, there are a couple of addi
 These are, in order of priority:
 
 1. Write an install script so GProfiles is easier to install on the user-end.
-2. Remove `processes` as a dependency and just use `sysinfo`.
+2. ~~Remove `processes` as a dependency and just use `sysinfo`.~~
 3. When creating a new profile, use its icon image as the default poster, rather than a preset image.
 4. Convert a custom application to an emulated installed application.
    - This would allow a banner to be used instead of a `.bmp` image for the profile.
