@@ -4,7 +4,14 @@ An objectively better way to manage custom Logitech GHUB gaming profiles.
 
 # Installation
 
-Compile this application from its source code by following these steps:
+## Recommended
+
+Download the latest executable from the [release files](https://github.com/Lee-matod/GProfiles/releases).  
+No installer. No UAC. Just plug-and-play.
+
+## Do It Yourself!
+
+If you wish to build the application yourself, follow the steps below.
 
 ### Requirements
 
@@ -31,24 +38,23 @@ After Cargo has finished building, run the application with:
 cargo run --release
 ```
 
+You can also move or create a shortcut to the `GProfiles.exe` executable file created under `/target/release`.
+
 # Features
 
-- Running processes detection.
-- Create a new profile from an executable.
-- Rename profiles.
-- Change the image of profiles.
-- Change the top-level executable path of profiles.
-- Delete profiles.
+- Intuitive running processes detection.
+- Easy profile customization (rename profiles, change icons, and more).
 - Built-in LGHUB restart button to apply changes.
+- Native executable icon transparency.
 
 # To-do
 
 While I personally consider this project as finished, there are a couple of additional feature I would like to include in the future.
 These are, in order of priority:
 
-1. Write an install script so GProfiles is easier to install on the user-end.
+1. ~~Write an install script so GProfiles is easier to install on the user-end.~~ I replaced this with a bundled executable.
 2. ~~Remove `processes` as a dependency and just use `sysinfo`.~~
-3. When creating a new profile, use its icon image as the default poster, rather than a preset image.
+3. ~~When creating a new profile, use its icon image as the default poster, rather than a preset image.~~
 4. Convert a custom application to an emulated installed application.
    - This would allow a banner to be used instead of a `.bmp` image for the profile.
    - An identifier should be placed in the JSON blob to ensure editing is allowed for future instances.
@@ -61,7 +67,7 @@ This project and its developer(s) are not affiliated in any way with Logitech In
 
 # Acknowledgements
 
-- Fonts and Material Icons from [Google Font](https://fonts.google.com).
+- Fonts and Material Icons from [Google Fonts](https://fonts.google.com).
 - This project uses [slint](https://slint.dev/) as its UI framework.
 
 <a href="https://github.com/slint-ui/slint">
