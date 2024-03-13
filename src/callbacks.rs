@@ -1,6 +1,7 @@
 use std::path;
 
 use crate::interface::Interface;
+use crate::load::Image;
 use crate::processes::resolve_path;
 use crate::types::{Application, Profile};
 
@@ -14,7 +15,10 @@ pub fn wrapper(interface: &Interface, callback: fn(&Interface) -> Result<Vec<App
 }
 
 pub fn on_name_edit(interface: &Interface) -> Result<Vec<Application>, ()> {
-    let (mut data, idx) = interface.displayed_profile().unwrap();
+    let (mut data, idx) = match interface.displayed_profile() {
+        Ok(ret) => ret,
+        Err(_) => return Err(()),
+    };
     let mut app = data[idx].clone();
 
     let name = interface.ui.get_profile_field_name();
@@ -28,20 +32,21 @@ pub fn on_name_edit(interface: &Interface) -> Result<Vec<Application>, ()> {
 }
 
 pub fn on_image_edit(interface: &Interface) -> Result<Vec<Application>, ()> {
-    let (mut data, idx) = interface.displayed_profile().unwrap();
+    let (mut data, idx) = match interface.displayed_profile() {
+        Ok(ret) => ret,
+        Err(_) => return Err(()),
+    };
     let mut app = data[idx].clone();
 
     let path_selected = interface.select_file(
         "Image",
-        &["png"],
+        &["png", "bmp"],
         path::Path::new(&interface.ui.get_profile_field_img().to_string()),
     )?;
 
-    let bmp_image = interface
-        .handler
-        .save_image_for(app.applicationId.clone(), &path_selected)
-        .unwrap();
-    let canon = resolve_path(bmp_image.as_path());
+    let img = Image::from_path(path::Path::new(&path_selected));
+    let bmp = img.save_to_cache(app.applicationId.clone());
+    let canon = resolve_path(bmp.as_path());
     interface
         .ui
         .set_profile_field_img(slint::SharedString::from(&canon));
@@ -51,7 +56,10 @@ pub fn on_image_edit(interface: &Interface) -> Result<Vec<Application>, ()> {
 }
 
 pub fn on_exec_edit(interface: &Interface) -> Result<Vec<Application>, ()> {
-    let (mut data, idx) = interface.displayed_profile().unwrap();
+    let (mut data, idx) = match interface.displayed_profile() {
+        Ok(ret) => ret,
+        Err(_) => return Err(()),
+    };
     let mut app = data[idx].clone();
 
     let path_selected = interface.select_file(
@@ -68,7 +76,10 @@ pub fn on_exec_edit(interface: &Interface) -> Result<Vec<Application>, ()> {
 }
 
 pub fn on_forget_app(interface: &Interface) -> Result<Vec<Application>, ()> {
-    let (mut data, idx) = interface.displayed_profile().unwrap();
+    let (mut data, idx) = match interface.displayed_profile() {
+        Ok(ret) => ret,
+        Err(_) => return Err(()),
+    };
 
     let app = data.remove(idx);
     let app_profiles = interface.handler.find_profiles(&app);

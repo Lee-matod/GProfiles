@@ -4,6 +4,8 @@
 #![windows_subsystem = "windows"]
 
 mod callbacks;
+mod extract;
+mod handler;
 mod interface;
 mod load;
 mod processes;
