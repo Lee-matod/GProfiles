@@ -3,7 +3,7 @@ use std::{path, thread, time};
 use rfd::FileDialog;
 use slint::{ComponentHandle, Model, SharedString};
 
-use crate::load::BackgroundHandler;
+use crate::handler::BackgroundHandler;
 use crate::processes::get_processes;
 use crate::types::Application;
 use crate::{AppWindow, ProcessSlint};
@@ -44,10 +44,13 @@ impl Interface {
         if profile_id == "" {
             return Err(());
         }
-        let idx = &data
+        let idx = &match data
             .iter()
             .position(|prof| prof.applicationId == profile_id.to_string())
-            .unwrap();
+        {
+            Some(res) => res,
+            None => return Err(()),
+        };
         Ok((data, *idx))
     }
 
@@ -86,17 +89,19 @@ impl Interface {
 
                     let mut to_slint: Vec<ProcessSlint> = Vec::new();
                     for path in running_processes {
+                        let filename = path.file_name();
                         if displayed_profiles
                             .iter()
                             .any(|p| p.executable.to_string() == path.to_string_lossy().to_string())
+                            || filename.is_none()
                         {
                             continue;
                         }
                         to_slint.push(ProcessSlint {
                             name: SharedString::from(
-                                path.file_name().unwrap().to_string_lossy().to_string(),
+                                filename.unwrap().to_string_lossy().to_string(),
                             ),
-                            executable: path.to_string_lossy().to_string().try_into().unwrap(),
+                            executable: SharedString::from(path.to_string_lossy().to_string()),
                         })
                     }
                     if to_slint.len() == displayed_processes.iter().len() {
