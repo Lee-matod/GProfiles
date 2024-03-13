@@ -3,6 +3,7 @@ import "../assets/fonts/Roboto/Roboto-Regular.ttf";
 export struct ProcessSlint {
     name: string,
     executable: string,
+    icon: image,
 }
 
 export component ProcessView inherits Rectangle {
@@ -27,10 +28,17 @@ export component ProcessView inherits Rectangle {
     }
 
     Text {
+        x: 35px;
         width: 180px;
         text: process.name;
         color: #ffffff;
         overflow: elide;
         font-family: "Roboto Sans";
+    }
+
+    Image {
+        x: 5px;
+        width: 23px;
+        source: root.process.icon;
     }
 }

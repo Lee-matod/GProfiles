@@ -3,8 +3,10 @@ use std::{path, thread, time};
 use rfd::FileDialog;
 use slint::{ComponentHandle, Model, SharedString};
 
+use crate::extract::get_icon;
 use crate::handler::BackgroundHandler;
-use crate::processes::get_processes;
+use crate::load::Image;
+use crate::processes::{get_processes, resolve_path};
 use crate::types::Application;
 use crate::{AppWindow, ProcessSlint};
 
@@ -97,11 +99,19 @@ impl Interface {
                         {
                             continue;
                         }
+                        let filepath = resolve_path(path.as_path());
+                        let img = Image::from_rgba(unsafe { get_icon(&filepath) });
+                        let rgba = img.load_from_cache();
                         to_slint.push(ProcessSlint {
                             name: SharedString::from(
                                 filename.unwrap().to_string_lossy().to_string(),
                             ),
-                            executable: SharedString::from(path.to_string_lossy().to_string()),
+                            executable: SharedString::from(filepath),
+                            icon: slint::Image::from_rgba8(slint::SharedPixelBuffer::clone_from_slice(
+                                rgba.as_raw(),
+                                rgba.width(),
+                                rgba.height(),
+                            )),
                         })
                     }
                     if to_slint.len() == displayed_processes.iter().len() {
