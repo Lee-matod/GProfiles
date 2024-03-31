@@ -14,7 +14,7 @@ use crate::processes::{resolve_path, system};
 use crate::types::{Application, InnerApplications, InnerProfiles, JsonData, Profile};
 use crate::{AppWindow, ProfileSlint};
 
-const BROKEN_IMAGE: &'static [u8] = include_bytes!("../assets/material_icons/broken_image_48.png");
+const BROKEN_IMAGE: &[u8; 565] = include_bytes!("../assets/material_icons/broken_image_48.png");
 
 pub struct BackgroundHandler {
     pub ui: AppWindow,
