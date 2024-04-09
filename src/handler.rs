@@ -2,19 +2,24 @@ use std::{path, process};
 
 use serde_json::Value;
 use slint::{ComponentHandle, SharedPixelBuffer, SharedString};
+use sysinfo::{System, ProcessRefreshKind, RefreshKind};
 use uuid::Uuid;
 
 use crate::callbacks::{
     on_add_app, on_exec_edit, on_forget_app, on_image_edit, on_name_edit, wrapper,
 };
-use crate::extract::get_icon;
+use crate::extract::{get_icon, safe_canonicalize};
 use crate::interface::Interface;
 use crate::load::Image;
-use crate::processes::{resolve_path, system};
 use crate::types::{Application, InnerApplications, InnerProfiles, JsonData, Profile};
 use crate::{AppWindow, ProfileSlint};
 
 const BROKEN_IMAGE: &[u8; 565] = include_bytes!("../assets/material_icons/broken_image_48.png");
+
+pub fn get_system() -> System {
+    let refresh = ProcessRefreshKind::new().with_exe(sysinfo::UpdateKind::Always);
+    System::new_with_specifics(RefreshKind::new().with_processes(refresh))
+}
 
 pub struct BackgroundHandler {
     pub ui: AppWindow,
@@ -144,9 +149,9 @@ impl BackgroundHandler {
         let app = Application {
             name: exec.file_stem().unwrap().to_string_lossy().to_string(),
             applicationId: app_uuid,
-            applicationPath: Some(resolve_path(exec)),
+            applicationPath: Some(safe_canonicalize(exec)),
             isCustom: Some(true),
-            posterPath: Some(resolve_path(icon.as_path())),
+            posterPath: Some(safe_canonicalize(icon.as_path())),
         };
         let profile = Profile {
             activeForApplication: true,
@@ -219,7 +224,7 @@ impl BackgroundHandler {
             handler.commit(apps, Some(profiles))
         });
         self.ui.on_restart_ghub(move || {
-            let mut sys = system();
+            let mut sys = get_system();
             sys.refresh_processes();
             for (_, proc) in sys.processes() {
                 let exec = match proc.exe() {

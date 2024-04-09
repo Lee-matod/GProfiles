@@ -1,8 +1,8 @@
 use std::path;
 
+use crate::extract::safe_canonicalize;
 use crate::interface::Interface;
 use crate::load::Image;
-use crate::processes::resolve_path;
 use crate::types::{Application, Profile};
 
 pub fn wrapper(interface: &Interface, callback: fn(&Interface) -> Result<Vec<Application>, ()>) {
@@ -46,7 +46,7 @@ pub fn on_image_edit(interface: &Interface) -> Result<Vec<Application>, ()> {
 
     let img = Image::from_path(path::Path::new(&path_selected));
     let bmp = img.save_to_cache(app.applicationId.clone());
-    let canon = resolve_path(bmp.as_path());
+    let canon = safe_canonicalize(bmp.as_path());
     interface
         .ui
         .set_profile_field_img(slint::SharedString::from(&canon));

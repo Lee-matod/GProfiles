@@ -3,10 +3,9 @@ use std::{path, thread, time};
 use rfd::FileDialog;
 use slint::{ComponentHandle, Model, SharedString};
 
-use crate::extract::get_icon;
+use crate::extract::{foreground_apps, get_icon, safe_canonicalize};
 use crate::handler::BackgroundHandler;
 use crate::load::Image;
-use crate::processes::{get_processes, resolve_path};
 use crate::types::Application;
 use crate::{AppWindow, ProcessSlint};
 
@@ -85,44 +84,42 @@ impl Interface {
                     let ui = reference.unwrap();
                     let needle = ui.get_search_text();
 
-                    let running_processes = get_processes(&needle.to_lowercase().as_str());
-                    let displayed_processes = ui.get_processes();
+                    let running_processes =
+                        unsafe { foreground_apps(&needle.to_lowercase().as_str()) };
                     let displayed_profiles = ui.get_profiles();
+                    let slint_model = slint::VecModel::default();
 
-                    let mut to_slint: Vec<ProcessSlint> = Vec::new();
                     for path in running_processes {
-                        let filename = path.file_name();
-                        if displayed_profiles
-                            .iter()
-                            .any(|p| p.executable.to_string() == path.to_string_lossy().to_string())
-                            || filename.is_none()
-                        {
+                        let filename = path.file_name().unwrap(); // We already verified this in foreground_apps
+                        if displayed_profiles.iter().any(|p| p.executable == &path.to_string_lossy()) {
                             continue;
                         }
-                        let filepath = resolve_path(path.as_path());
+                        let filepath = safe_canonicalize(path.as_path());
                         let img = Image::from_rgba(unsafe { get_icon(&filepath) });
                         let rgba = img.load_from_cache();
-                        to_slint.push(ProcessSlint {
-                            name: SharedString::from(
-                                filename.unwrap().to_string_lossy().to_string(),
-                            ),
+                        slint_model.push(ProcessSlint {
+                            name: SharedString::from(filename.to_str().unwrap()),
                             executable: SharedString::from(filepath),
-                            icon: slint::Image::from_rgba8(slint::SharedPixelBuffer::clone_from_slice(
-                                rgba.as_raw(),
-                                rgba.width(),
-                                rgba.height(),
-                            )),
+                            icon: slint::Image::from_rgba8(
+                                slint::SharedPixelBuffer::clone_from_slice(
+                                    rgba.as_raw(),
+                                    rgba.width(),
+                                    rgba.height(),
+                                ),
+                            ),
                         })
                     }
-                    if to_slint.len() == displayed_processes.iter().len() {
+                    let displayed_processes = ui.get_processes();
+                    let model_rc = slint::ModelRc::new(slint_model);
+                    if displayed_processes.row_count() == model_rc.row_count() {
                         // No difference between displayed process list and actual process list.
                         // We don't have to update the UI.
                         return;
                     };
-                    ui.set_processes(slint::ModelRc::new(slint::VecModel::from(to_slint)));
+                    ui.set_processes(model_rc);
                 })
                 .unwrap();
-                thread::sleep(time::Duration::from_millis(100));
+                thread::sleep(time::Duration::from_millis(500));
             }
         });
     }
