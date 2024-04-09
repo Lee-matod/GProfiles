@@ -1,9 +1,9 @@
 // I have no clue how this works, but it does!
 
 use core::mem::MaybeUninit;
-use std::ffi::OsStr;
-use std::mem;
-use std::os::windows::ffi::OsStrExt;
+use std::ffi::{OsStr, OsString};
+use std::os::windows::ffi::{OsStrExt, OsStringExt};
+use std::{mem, path};
 
 use image::RgbaImage;
 use winapi::shared::minwindef::{DWORD, LPVOID};
@@ -14,8 +14,81 @@ use winapi::um::wingdi::{
 };
 use winapi::um::winnt::VOID;
 use winapi::um::winuser::{DestroyIcon, GetIconInfo, ICONINFO};
-use windows::Win32::Foundation::HWND;
+use windows::Win32::Foundation::{BOOL, HWND, LPARAM};
 use windows::Win32::Graphics::Gdi::{GetDC, ReleaseDC};
+use windows::Win32::System::ProcessStatus::GetModuleFileNameExW;
+use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
+use windows::Win32::UI::WindowsAndMessaging::{
+    EnumWindows, GetWindowTextW, GetWindowThreadProcessId, IsWindowVisible,
+};
+
+static mut APPLICATIONS: Vec<(HWND, String)> = Vec::new();
+
+pub fn safe_canonicalize(path: &path::Path) -> String {
+    let canon = match path.canonicalize() {
+        Ok(pathbuf) => pathbuf,
+        Err(_) => return path.to_string_lossy().to_string(),
+    };
+    let full_path = canon.to_string_lossy().to_string();
+    match full_path.strip_prefix("\\\\?\\") {
+        Some(stripped) => stripped.to_string(),
+        None => full_path,
+    }
+}
+
+unsafe extern "system" fn enum_callback(hwnd: HWND, _: LPARAM) -> BOOL {
+    let mut buffer = [0u16; 512];
+    if GetWindowTextW(hwnd, &mut buffer) > 0 {
+        let title = String::from_utf16_lossy(&buffer);
+        APPLICATIONS.push((hwnd, title));
+    };
+    true.into()
+}
+
+pub unsafe fn foreground_apps(needle: &str) -> Vec<path::PathBuf> {
+    let mut foreground: Vec<path::PathBuf> = Vec::new();
+    let mut active_windows: Vec<HWND> = Vec::new();
+    APPLICATIONS.clear();
+
+    let _ = EnumWindows(Some(enum_callback), None);
+    for (hwnd, title) in APPLICATIONS.clone() {
+        if IsWindowVisible(hwnd).as_bool() && !title.is_empty() {
+            active_windows.push(hwnd);
+        }
+    };
+
+    for hwnd in active_windows {
+        let mut process_id = 0;
+        GetWindowThreadProcessId(hwnd, Some(&mut process_id));
+        if process_id == 0 {
+            continue;
+        };
+
+        let process_handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, process_id);
+        if process_handle.is_err() {
+            continue;
+        };
+
+        let mut module_filename = vec![0u16; 1024];
+        let size = GetModuleFileNameExW(process_handle.unwrap(), None, &mut module_filename);
+        if size == 0 {
+            continue;
+        };
+
+        let module_filename = OsString::from_wide(&module_filename[..size as usize]);
+        let filepath: String = module_filename.to_string_lossy().to_string();
+        let as_path = path::PathBuf::from(&filepath);
+        let name = match as_path.file_name() {
+            Some(filename) => filename.to_string_lossy().to_string(),
+            None => continue,
+        };
+        if !name.to_lowercase().contains(needle) || foreground.contains(&as_path) {
+            continue;
+        };
+        foreground.push(as_path);
+    };
+    foreground
+}
 
 pub unsafe fn get_icon(path: &str) -> RgbaImage {
     let mut shfi = SHFILEINFOW {
