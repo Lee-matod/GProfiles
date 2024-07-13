@@ -1,25 +1,20 @@
-// I have no clue how this works, but it does!
-
 use core::mem::MaybeUninit;
 use std::ffi::{OsStr, OsString};
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use std::{mem, path};
 
 use image::RgbaImage;
-use winapi::shared::minwindef::{DWORD, LPVOID};
-use winapi::shared::windef::{HBITMAP, HICON};
-use winapi::um::shellapi::{SHGetFileInfoW, SHFILEINFOW};
-use winapi::um::wingdi::{
-    DeleteObject, GetBitmapBits, GetObjectW, BITMAP, BITMAPINFOHEADER, BI_RGB,
-};
-use winapi::um::winnt::VOID;
-use winapi::um::winuser::{DestroyIcon, GetIconInfo, ICONINFO};
 use windows::Win32::Foundation::{BOOL, HWND, LPARAM};
-use windows::Win32::Graphics::Gdi::{GetDC, ReleaseDC};
+use windows::Win32::Graphics::Gdi::{
+    DeleteObject, GetBitmapBits, GetDC, GetObjectW, ReleaseDC, BITMAP, BITMAPINFOHEADER, HBITMAP,
+    HGDIOBJ,
+};
 use windows::Win32::System::ProcessStatus::GetModuleFileNameExW;
 use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
+use windows::Win32::UI::Shell::{SHGetFileInfoW, SHFILEINFOW};
 use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, GetWindowTextW, GetWindowThreadProcessId, IsWindowVisible,
+    DestroyIcon, EnumWindows, GetIconInfo, GetWindowTextW, GetWindowThreadProcessId,
+    IsWindowVisible, HICON, ICONINFO,
 };
 
 static mut APPLICATIONS: Vec<(HWND, String)> = Vec::new();
@@ -55,7 +50,7 @@ pub unsafe fn foreground_apps(needle: &str) -> Vec<path::PathBuf> {
         if IsWindowVisible(hwnd).as_bool() && !title.is_empty() {
             active_windows.push(hwnd);
         }
-    };
+    }
 
     for hwnd in active_windows {
         let mut process_id = 0;
@@ -86,13 +81,13 @@ pub unsafe fn foreground_apps(needle: &str) -> Vec<path::PathBuf> {
             continue;
         };
         foreground.push(as_path);
-    };
+    }
     foreground
 }
 
 pub unsafe fn get_icon(path: &str) -> RgbaImage {
     let mut shfi = SHFILEINFOW {
-        hIcon: std::mem::size_of::<HICON>() as HICON,
+        hIcon: HICON(0),
         iIcon: 0,
         dwAttributes: 0,
         szDisplayName: [0; 260],
@@ -103,11 +98,11 @@ pub unsafe fn get_icon(path: &str) -> RgbaImage {
         .chain(std::iter::once(0))
         .collect();
     SHGetFileInfoW(
-        path.as_ptr(),
-        0,
-        &mut shfi,
-        std::mem::size_of::<DWORD>() as u32,
-        0x000000100,
+        windows::core::PCWSTR(path.as_ptr()),
+        windows::Win32::Storage::FileSystem::FILE_FLAGS_AND_ATTRIBUTES(0),
+        Some(&mut shfi),
+        std::mem::size_of::<u32>() as u32,
+        windows::Win32::UI::Shell::SHGFI_FLAGS(0x000000100),
     );
     let hicon = shfi.hIcon;
     let image = hicon_to_image(hicon);
@@ -116,23 +111,22 @@ pub unsafe fn get_icon(path: &str) -> RgbaImage {
 }
 
 unsafe fn hicon_to_image(icon: HICON) -> RgbaImage {
-    let bitmap_size_i32 = i32::try_from(mem::size_of::<BITMAP>()).unwrap();
     let biheader_size_u32 = u32::try_from(mem::size_of::<BITMAPINFOHEADER>()).unwrap();
     let mut info = ICONINFO {
-        fIcon: 0,
+        fIcon: BOOL(0),
         xHotspot: 0,
         yHotspot: 0,
-        hbmMask: std::mem::size_of::<HBITMAP>() as HBITMAP,
-        hbmColor: std::mem::size_of::<HBITMAP>() as HBITMAP,
+        hbmMask: HBITMAP(0),
+        hbmColor: HBITMAP(0),
     };
     GetIconInfo(icon, &mut info);
-    DeleteObject(info.hbmMask as *mut VOID);
+    DeleteObject(info.hbmMask);
     let mut bitmap: MaybeUninit<BITMAP> = MaybeUninit::uninit();
 
     GetObjectW(
-        info.hbmColor as *mut VOID,
-        bitmap_size_i32,
-        bitmap.as_mut_ptr() as *mut VOID,
+        HGDIOBJ(info.hbmColor.0 as isize),
+        mem::size_of::<BITMAP>() as i32,
+        Some(bitmap.as_mut_ptr() as *mut std::ffi::c_void),
     );
 
     let bitmap = bitmap.assume_init_ref();
@@ -155,7 +149,7 @@ unsafe fn hicon_to_image(icon: HICON) -> RgbaImage {
         biHeight: -bitmap.bmHeight.abs(),
         biPlanes: 1,
         biBitCount: 32,
-        biCompression: BI_RGB,
+        biCompression: 0,
         biSizeImage: 0,
         biXPelsPerMeter: 0,
         biYPelsPerMeter: 0,
@@ -164,10 +158,14 @@ unsafe fn hicon_to_image(icon: HICON) -> RgbaImage {
     };
 
     let mut bmp: Vec<u8> = vec![0; buf_size];
-    let _mr_right = GetBitmapBits(info.hbmColor, buf_size as i32, bmp.as_mut_ptr() as LPVOID);
+    let _mr_right = GetBitmapBits(
+        HBITMAP(info.hbmColor.0 as isize),
+        buf_size as i32,
+        bmp.as_mut_ptr() as *mut std::ffi::c_void,
+    );
     buf.set_len(bmp.capacity());
     ReleaseDC(windows::Win32::Foundation::HWND(0), dc);
-    DeleteObject(info.hbmColor as *mut VOID);
+    DeleteObject(info.hbmColor);
 
     for chunk in bmp.chunks_exact_mut(4) {
         let [b, _, r, _] = chunk else { unreachable!() };
