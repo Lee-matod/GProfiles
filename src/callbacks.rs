@@ -4,8 +4,10 @@ use crate::extract::safe_canonicalize;
 use crate::interface::Interface;
 use crate::load::Image;
 use crate::types::{Application, Profile};
+use crate::AppWindow;
 
-pub fn wrapper(interface: &Interface, callback: fn(&Interface) -> Result<Vec<Application>, ()>) {
+pub fn wrapper(app: AppWindow, callback: fn(&Interface) -> Result<Vec<Application>, ()>) {
+    let interface = &Interface::dummy(app);
     interface.ui.invoke_dialog_lock_acquire();
     match callback(interface) {
         Ok(data) => interface.handler.commit(data, None),

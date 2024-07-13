@@ -2,19 +2,18 @@ use std::{path, process};
 
 use serde_json::Value;
 use slint::{ComponentHandle, SharedPixelBuffer, SharedString};
-use sysinfo::{System, ProcessRefreshKind, RefreshKind};
+use sysinfo::{ProcessRefreshKind, RefreshKind, System};
 use uuid::Uuid;
 
 use crate::callbacks::{
     on_add_app, on_exec_edit, on_forget_app, on_image_edit, on_name_edit, wrapper,
 };
 use crate::extract::{get_icon, safe_canonicalize};
-use crate::interface::Interface;
 use crate::load::Image;
 use crate::types::{Application, InnerApplications, InnerProfiles, JsonData, Profile};
 use crate::{AppWindow, ProfileSlint};
 
-const BROKEN_IMAGE: &[u8; 565] = include_bytes!("../assets/material_icons/broken_image_48.png");
+const BROKEN_IMAGE: &[u8; 5038] = include_bytes!("../assets/material_icons/broken_image.png");
 
 pub fn get_system() -> System {
     let refresh = ProcessRefreshKind::new().with_exe(sysinfo::UpdateKind::Always);
@@ -185,36 +184,27 @@ impl BackgroundHandler {
 
     fn set_callbacks(&self) {
         // I strongly disapprove of this
+
         let weak = self.ui.as_weak();
-        self.ui.on_name_edit(move || {
-            let ui = weak.unwrap();
-            let interface = Interface::dummy(ui);
-            wrapper(&interface, on_name_edit)
-        });
+        self.ui
+            .on_name_edit(move || wrapper(weak.unwrap(), on_name_edit));
+
         let weak = self.ui.as_weak();
-        self.ui.on_image_edit(move || {
-            let ui = weak.unwrap();
-            let interface = Interface::dummy(ui);
-            wrapper(&interface, on_image_edit)
-        });
+        self.ui
+            .on_image_edit(move || wrapper(weak.unwrap(), on_image_edit));
+
         let weak = self.ui.as_weak();
-        self.ui.on_exec_edit(move || {
-            let ui = weak.unwrap();
-            let interface = Interface::dummy(ui);
-            wrapper(&interface, on_exec_edit)
-        });
+        self.ui
+            .on_exec_edit(move || wrapper(weak.unwrap(), on_exec_edit));
+
         let weak = self.ui.as_weak();
-        self.ui.on_add_app(move || {
-            let ui = weak.unwrap();
-            let interface = Interface::dummy(ui);
-            wrapper(&interface, on_add_app)
-        });
+        self.ui
+            .on_add_app(move || wrapper(weak.unwrap(), on_add_app));
+
         let weak = self.ui.as_weak();
-        self.ui.on_forget_app(move || {
-            let ui = weak.unwrap();
-            let interface = Interface::dummy(ui);
-            wrapper(&interface, on_forget_app)
-        });
+        self.ui
+            .on_forget_app(move || wrapper(weak.unwrap(), on_forget_app));
+
         let weak = self.ui.as_weak();
         self.ui.on_add_process(move |process| {
             let ui = weak.unwrap();
@@ -223,22 +213,21 @@ impl BackgroundHandler {
                 handler.create_application(path::Path::new(&process.executable.to_string()));
             handler.commit(apps, Some(profiles))
         });
+
         self.ui.on_restart_ghub(move || {
             let mut sys = get_system();
             sys.refresh_processes();
             for (_, proc) in sys.processes() {
-                let exec = match proc.exe() {
-                    Some(res) => res,
-                    None => continue,
-                };
-                if exec.starts_with("C:\\Program Files\\LGHUB") {
-                    proc.kill();
+                if let Some(exec) = proc.exe() {
+                    if exec.starts_with("C:\\Program Files\\LGHUB") {
+                        proc.kill();
+                    }
                 }
             }
             process::Command::new("C:\\Program Files\\LGHUB\\system_tray\\lghub_system_tray.exe")
                 .spawn()
                 .unwrap();
-        })
+        });
     }
 }
 
