@@ -6,6 +6,11 @@ use crate::load::Image;
 use crate::types::{Application, Profile};
 use crate::AppWindow;
 
+/// A helper method that wraps common funcitonality for button callbacks.
+///
+/// Dialog locking is automatically acquired before invoking the provided callback and released afterwards.
+///
+/// The provided `app` should be given using `AppWindow.as_weak` and unwrapping it.
 pub fn wrapper(app: AppWindow, callback: fn(&Interface) -> Result<Vec<Application>, ()>) {
     let interface = &Interface::dummy(app);
     interface.ui.invoke_dialog_lock_acquire();
@@ -16,6 +21,7 @@ pub fn wrapper(app: AppWindow, callback: fn(&Interface) -> Result<Vec<Applicatio
     interface.ui.invoke_dialog_lock_release();
 }
 
+/// Callback that is invoked whenever a profile name is edited through LineEdit.
 pub fn on_name_edit(interface: &Interface) -> Result<Vec<Application>, ()> {
     let (mut data, idx) = match interface.displayed_profile() {
         Ok(ret) => ret,
@@ -33,6 +39,7 @@ pub fn on_name_edit(interface: &Interface) -> Result<Vec<Application>, ()> {
     Ok(data)
 }
 
+/// Callback that is invoked whenever a profile thumbnail is changed through the Profile Editor.
 pub fn on_image_edit(interface: &Interface) -> Result<Vec<Application>, ()> {
     let (mut data, idx) = match interface.displayed_profile() {
         Ok(ret) => ret,
@@ -57,6 +64,7 @@ pub fn on_image_edit(interface: &Interface) -> Result<Vec<Application>, ()> {
     Ok(data)
 }
 
+/// Callback that is invoked whenever a profile executable location is changed through the Profile Editor.
 pub fn on_exec_edit(interface: &Interface) -> Result<Vec<Application>, ()> {
     let (mut data, idx) = match interface.displayed_profile() {
         Ok(ret) => ret,
@@ -77,6 +85,7 @@ pub fn on_exec_edit(interface: &Interface) -> Result<Vec<Application>, ()> {
     Ok(data)
 }
 
+/// Callback that is invoked whenever a profile is deleted through the Forget button.
 pub fn on_forget_app(interface: &Interface) -> Result<Vec<Application>, ()> {
     let (mut data, idx) = match interface.displayed_profile() {
         Ok(ret) => ret,
@@ -101,6 +110,9 @@ pub fn on_forget_app(interface: &Interface) -> Result<Vec<Application>, ()> {
     Err(())
 }
 
+/// Callback that is invoked whenever a new profile should be added through an executable path.
+///
+/// This opens the File Explorer as a dialog to select the path.
 pub fn on_add_app(interface: &Interface) -> Result<Vec<Application>, ()> {
     let selected = interface.select_file("Executable", &["exe"], path::Path::new(""))?;
     let as_path = path::Path::new(&selected);

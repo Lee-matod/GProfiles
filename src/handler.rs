@@ -15,6 +15,7 @@ use crate::{AppWindow, ProfileSlint};
 
 const BROKEN_IMAGE: &[u8; 5038] = include_bytes!("../assets/material_icons/broken_image.png");
 
+/// Retrieve a System with process refresh set to always.
 pub fn get_system() -> System {
     let refresh = ProcessRefreshKind::new().with_exe(sysinfo::UpdateKind::Always);
     System::new_with_specifics(RefreshKind::new().with_processes(refresh))
@@ -25,16 +26,21 @@ pub struct BackgroundHandler {
 }
 
 impl BackgroundHandler {
+    /// Creates an BackgroundHandler that helps manage the back-end of the application.
+    /// 
+    /// This sets buttons callbacks and should only be called during app initialization.
     pub fn new(ui: AppWindow) -> Self {
         let handler = BackgroundHandler::dummy(ui);
         handler.set_callbacks();
         handler
     }
 
+    /// Creates a dummy BackgroundHandler for the sake of easing other tasks.
     pub fn dummy(ui: AppWindow) -> Self {
         BackgroundHandler { ui }
     }
 
+    /// Retrieves the settings JSON from the SQLite Logitech database.
     pub fn settings(&self) -> rusqlite::Result<JsonData> {
         let ghub_settings = self.get_database();
         let conn = rusqlite::Connection::open(ghub_settings)?;
@@ -44,6 +50,7 @@ impl BackgroundHandler {
         Ok(serde_json::from_str(&decoded).unwrap())
     }
 
+    /// Loads all Logitech profiles and adds them to the UI.
     pub fn load_profiles(&self) -> () {
         let mut profiles: Vec<ProfileSlint> = Vec::new();
         let data = self.settings().unwrap().applications.applications;
@@ -81,6 +88,7 @@ impl BackgroundHandler {
             .set_profiles(slint::ModelRc::new(slint::VecModel::from(profiles)));
     }
 
+    /// Commit any changes to the Logitech settings SQLite database.
     pub fn commit(&self, applications: Vec<Application>, profiles: Option<Vec<Profile>>) -> () {
         let ghub_settings = self.get_database();
         let conn = rusqlite::Connection::open(ghub_settings).unwrap();
@@ -109,6 +117,7 @@ impl BackgroundHandler {
         self.load_profiles();
     }
 
+    /// Tries to retrieve the default Desktop profile.
     pub fn get_desktop_profile(&self) -> Option<Application> {
         let settings = self.settings().unwrap();
         for app in settings.applications.applications {
@@ -119,6 +128,7 @@ impl BackgroundHandler {
         None
     }
 
+    /// Locates Profiles for the provided Application.
     pub fn find_profiles(&self, app: &Application) -> Vec<Profile> {
         let settings = self.settings().unwrap();
         let mut matched_profiles: Vec<Profile> = Vec::new();
@@ -130,6 +140,9 @@ impl BackgroundHandler {
         matched_profiles
     }
 
+    /// Creates a new Application from the provided executable path.
+    /// 
+    /// This automatically creates a new default profile for the generated Application.
     pub fn create_application(&self, exec: &path::Path) -> (Vec<Application>, Vec<Profile>) {
         let mut settings = self.settings().unwrap();
         let app_uuid = Uuid::new_v4().to_string().replace("-", "");
@@ -167,6 +180,7 @@ impl BackgroundHandler {
         )
     }
 
+    /// Retrieves the filepath for the Logitech settings database.
     fn get_database(&self) -> path::PathBuf {
         let localappdata_env = option_env!("LOCALAPPDATA").expect("no %localappdata% directory");
 

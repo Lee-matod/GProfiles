@@ -19,6 +19,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 static mut APPLICATIONS: Vec<(HWND, String)> = Vec::new();
 
+/// Safely tries to perform a canonicalization for a given path.
 pub fn safe_canonicalize(path: &path::Path) -> String {
     let canon = match path.canonicalize() {
         Ok(pathbuf) => pathbuf,
@@ -40,6 +41,7 @@ unsafe extern "system" fn enum_callback(hwnd: HWND, _: LPARAM) -> BOOL {
     true.into()
 }
 
+/// Retrieves the executable paths of all currently running foreground applications.
 pub unsafe fn foreground_apps(needle: &str) -> Vec<path::PathBuf> {
     let mut foreground: Vec<path::PathBuf> = Vec::new();
     let mut active_windows: Vec<HWND> = Vec::new();
@@ -85,6 +87,7 @@ pub unsafe fn foreground_apps(needle: &str) -> Vec<path::PathBuf> {
     foreground
 }
 
+/// Retrieves the icon attached to an executable through the given executable path.
 pub unsafe fn get_icon(path: &str) -> RgbaImage {
     let mut shfi = SHFILEINFOW {
         hIcon: HICON(0),
