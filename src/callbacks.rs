@@ -106,8 +106,9 @@ pub fn on_forget_app(interface: &Interface) -> Result<Vec<Application>, ()> {
 
     interface.handler.commit(data, Some(profiles));
     interface.reset_fields();
+    interface.handler.delete_image(app.applicationId);
 
-    Err(())
+    Err(()) // This is intentional. We have already commited our changes.
 }
 
 /// Callback that is invoked whenever a new profile should be added through an executable path.

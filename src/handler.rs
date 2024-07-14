@@ -1,4 +1,4 @@
-use std::{path, process};
+use std::{fs, path, process};
 
 use serde_json::Value;
 use slint::{ComponentHandle, SharedPixelBuffer, SharedString};
@@ -178,6 +178,19 @@ impl BackgroundHandler {
             settings.applications.applications,
             settings.profiles.profiles,
         )
+    }
+
+    /// Tries to delete a cached image over at `LGHUB\icon_cache`.
+    ///
+    /// Used when an application is deleted and storage needs to be cleared.
+    pub fn delete_image(&self, id: String) -> () {
+        let settings = self.get_database();
+        let lghub = settings.parent().expect("settings.db has no parent");
+        let icon_cache = lghub.join("icon_cache");
+        let image = icon_cache.join(id + ".bmp");
+        if image.exists() {
+            fs::remove_file(image).unwrap_or(());
+        }
     }
 
     /// Retrieves the filepath for the Logitech settings database.
