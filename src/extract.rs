@@ -109,7 +109,7 @@ pub unsafe fn get_icon(path: &str) -> RgbaImage {
     );
     let hicon = shfi.hIcon;
     let image = hicon_to_image(hicon);
-    DestroyIcon(hicon);
+    let _ = DestroyIcon(hicon);
     return image;
 }
 
@@ -122,7 +122,7 @@ unsafe fn hicon_to_image(icon: HICON) -> RgbaImage {
         hbmMask: HBITMAP(0),
         hbmColor: HBITMAP(0),
     };
-    GetIconInfo(icon, &mut info);
+    let _ = GetIconInfo(icon, &mut info);
     DeleteObject(info.hbmMask);
     let mut bitmap: MaybeUninit<BITMAP> = MaybeUninit::uninit();
 
