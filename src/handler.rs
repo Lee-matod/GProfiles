@@ -27,7 +27,7 @@ pub struct BackgroundHandler {
 
 impl BackgroundHandler {
     /// Creates an BackgroundHandler that helps manage the back-end of the application.
-    /// 
+    ///
     /// This sets buttons callbacks and should only be called during app initialization.
     pub fn new(ui: AppWindow) -> Self {
         let handler = BackgroundHandler::dummy(ui);
@@ -141,7 +141,7 @@ impl BackgroundHandler {
     }
 
     /// Creates a new Application from the provided executable path.
-    /// 
+    ///
     /// This automatically creates a new default profile for the generated Application.
     pub fn create_application(&self, exec: &path::Path) -> (Vec<Application>, Vec<Profile>) {
         let mut settings = self.settings().unwrap();
@@ -158,13 +158,13 @@ impl BackgroundHandler {
             .find(|p| p.name == "PROFILE_NAME_DEFAULT")
             .expect("no default profile");
 
-        let app = Application {
-            name: exec.file_stem().unwrap().to_string_lossy().to_string(),
-            applicationId: app_uuid,
-            applicationPath: Some(safe_canonicalize(exec)),
-            isCustom: Some(true),
-            posterPath: Some(safe_canonicalize(icon.as_path())),
-        };
+        let app = Application::custom(
+            exec.file_stem().unwrap().to_string_lossy().to_string(),
+            app_uuid,
+            safe_canonicalize(exec),
+            safe_canonicalize(icon.as_path()),
+        );
+
         let profile = Profile {
             activeForApplication: true,
             applicationId: app.applicationId.clone(),
