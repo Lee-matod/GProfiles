@@ -1,5 +1,3 @@
-import "../assets/fonts/ArchivoBlack/ArchivoBlack-Regular.ttf";
-
 import { ScrollView, LineEdit } from "std-widgets.slint";
 
 import { SlintAttribution } from "attribution.slint"; 
@@ -134,7 +132,7 @@ export component AppWindow inherits Window {
             y: 205px;
 
             text: "FORGET";
-            icon: @image-url("../assets/material_icons/delete_24.png");
+            icon: @image-url("../assets/material_icons/delete.png");
             background: forget-area.has-hover ? #ff2e2e : #e00d0d;
 
             animate background {
@@ -154,7 +152,7 @@ export component AppWindow inherits Window {
             width: 190px;
 
             text: "RESTART LGHUB";
-            icon: @image-url("../assets/material_icons/refresh_24.png");
+            icon: @image-url("../assets/material_icons/refresh.png");
             background: apply-area.has-hover ? #999999 : #666666;
 
             animate background {
@@ -175,7 +173,7 @@ export component AppWindow inherits Window {
 
         active: active-profile;
         profile: {
-            icon: @image-url("../assets/material_icons/add_circle_48.png")
+            icon: @image-url("../assets/material_icons/add.png")
         };
 
         TouchArea {
