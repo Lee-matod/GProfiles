@@ -52,17 +52,15 @@ impl Callbacks {
 
     pub fn from_process(app: AppWindow, process: Process) -> () {
         let settings = LogitechSettings::new();
-        let application =
-            settings.new_application(path::Path::new(&process.executable.to_string()));
-        let profile = settings.new_default_profile(&application);
-        settings.commit(application.clone());
-        settings.commit(profile);
+        if let Some(application) =
+            settings.create_application(path::Path::new(&process.executable.to_string()))
+        {
+            let game = Game::from_settings(application.clone());
+            app.load_applications();
+            app.load_keymaps(&game);
+            app.set_active_application(game);
+        }
         settings.close();
-        
-        let game = Game::from_settings(application.clone());
-        app.load_applications();
-        app.load_keymaps(&game);
-        app.set_active_application(game);
     }
 
     pub fn name_edit(app: AppWindow) -> () {
@@ -112,7 +110,7 @@ impl Callbacks {
         app.load_applications();
         app.load_keymaps(&desktop);
         app.set_active_application(desktop);
-}
+    }
 
     pub fn new_key(app: AppWindow) -> () {
         let active = app.get_active_application();
