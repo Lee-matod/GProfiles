@@ -24,27 +24,14 @@ export component AppWindow inherits Window {
     callback set-object(Keybind);
     callback delete-key(Keybind);
 
-    in-out property <[Keybind]> keybinds: [{ }, { }, { }, { }, { }];
-    in-out property <[Process]> processes: [{ }, { }, { }, { }, { }, { }, { }, { }];
-    in-out property <[Game]> applications: [
-        {
-            id: "APPLICATION_NAME_DESKTOP",
-            name: "Desktop",
-            icon: @image-url("../assets/material_icons/desktop.png"),
-            type: GameType.desktop
-        },
-        {
-            name: "Fortnite",
-            icon: @image-url("../assets/material_icons/desktop.png"),
-            type: GameType.installed
-        },
-        { },
-        { }
-    ];
+    in-out property <[Keybind]> keybinds;
+    in-out property <[Process]> processes;
+    in-out property <[Game]> applications;
     in-out property <Game> active-application: applications[0];
-    in-out property <string> active-application-name: active-application.name;
-    in-out property <string> active-application-image: active-application.image-path;
-    in-out property <string> active-application-executable: active-application.executable;
+    in-out property <string> active-application-name: "Desktop";
+    in-out property <string> active-application-image: "";
+    in-out property <string> active-application-executable: "";
+    in-out property <GameType> active-application-type: GameType.desktop;
     out property <string> process-query;
 
     width: 960px;
@@ -172,7 +159,7 @@ export component AppWindow inherits Window {
             y: 85px;
             title: "IMAGE PATH";
             content: active-application-image;
-            content-type: active-application.type == GameType.custom ? FieldContentType.editable : FieldContentType.viewable;
+            content-type: active-application.type == GameType.custom ? FieldContentType.interactable : FieldContentType.viewable;
             icon: active-application.type == GameType.custom ? @image-url("../assets/material_icons/edit.png") : @image-url("");
             clicked => {
                 root.image-edit();
@@ -184,7 +171,7 @@ export component AppWindow inherits Window {
             y: 145px;
             title: "EXECUTABLE PATH";
             content: active-application-executable;
-            content-type: active-application.type == GameType.desktop ? FieldContentType.viewable : (active-application.type == GameType.installed ? FieldContentType.interactable : FieldContentType.editable);
+            content-type: active-application.type == GameType.desktop ? FieldContentType.viewable : FieldContentType.interactable;
             icon: active-application.type == GameType.custom ? @image-url("../assets/material_icons/edit.png") : @image-url("");
             clicked => {
                 root.executable-edit();
