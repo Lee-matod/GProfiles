@@ -14,6 +14,14 @@ use crate::types::Application;
 use crate::{AppWindow, Game, GameType, Keybind, Process};
 
 impl AppWindow {
+    pub fn set_application(&self, game: Game) -> () {
+        self.set_active_application(game.clone());
+        self.set_active_application_name(game.name);
+        self.set_active_application_image(game.image_path);
+        self.set_active_application_executable(game.executable);
+        self.set_active_application_type(game.r#type);
+    }
+
     pub fn selected_application(&self) -> Option<Application> {
         let settings = LogitechSettings::new();
         let apps: Vec<Application> = settings.get_applications();
