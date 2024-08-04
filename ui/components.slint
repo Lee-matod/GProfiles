@@ -16,16 +16,30 @@ export component SlintAttribution inherits Rectangle {
         y: 80px;
         width: 110px;
         height: 50px;
-        
         background: #3b3b3b;
     }
 
     Rectangle {
-        x: 300px;
         y: 180px;
-        width: 110px;
-        height: 50px;
-
+        height: 10px;
+        width: 80px;
         background: #000000;
+    }
+}
+
+export component HoverableComponent inherits Rectangle {
+    callback clicked();
+
+    in property <color> hover;
+    in property <color> default;
+    in property <duration> duration: 150ms;
+
+    animate background { duration: duration; }
+
+    background: area.has-hover ? hover : default;
+    area := TouchArea {
+        clicked => {
+            root.clicked()
+        }
     }
 }

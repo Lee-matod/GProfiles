@@ -1,124 +1,186 @@
-use std::path;
+use slint::{ComponentHandle, Model};
+use std::{path, process};
+use sysinfo::{ProcessRefreshKind, RefreshKind, System};
 
-use crate::extract::safe_canonicalize;
-use crate::interface::Interface;
-use crate::load::Image;
-use crate::types::{Application, Profile};
-use crate::AppWindow;
+use crate::extract::key_input;
+use crate::remapper::KeyboardKey;
+use crate::settings::{Commit, LogitechSettings};
+use crate::types::Application;
+use crate::{AppWindow, Game, GameType, Keybind, Process};
 
-/// A helper method that wraps common funcitonality for button callbacks.
-///
-/// Dialog locking is automatically acquired before invoking the provided callback and released afterwards.
-///
-/// The provided `app` should be given using `AppWindow.as_weak` and unwrapping it.
-pub fn wrapper(app: AppWindow, callback: fn(&Interface) -> Result<Vec<Application>, ()>) {
-    let interface = &Interface::dummy(app);
-    interface.ui.invoke_dialog_lock_acquire();
-    match callback(interface) {
-        Ok(data) => interface.handler.commit(data, None),
-        Err(_) => {}
-    }
-    interface.ui.invoke_dialog_lock_release();
-}
+pub struct Callbacks;
 
-/// Callback that is invoked whenever a profile name is edited through LineEdit.
-pub fn on_name_edit(interface: &Interface) -> Result<Vec<Application>, ()> {
-    let (mut data, idx) = match interface.displayed_profile() {
-        Ok(ret) => ret,
-        Err(_) => return Err(()),
-    };
-    let mut app = data[idx].clone();
-
-    let name = interface.ui.get_profile_field_name();
-    if name == "" {
-        return Err(());
+impl Callbacks {
+    pub fn application_clicked(app: AppWindow, application: Game) -> () {
+        app.load_keymaps(&application);
+        app.set_active_application(application);
     }
 
-    app.name = name.to_string();
-    data[idx] = app;
-    Ok(data)
-}
+    pub fn restart_ghub() -> () {
+        let refresh = ProcessRefreshKind::new().with_exe(sysinfo::UpdateKind::Always);
+        let mut sys = System::new_with_specifics(RefreshKind::new().with_processes(refresh));
+        sys.refresh_processes();
+        for (_, proc) in sys.processes() {
+            if let Some(exec) = proc.exe() {
+                if exec.starts_with("C:\\Program Files\\LGHUB") {
+                    proc.kill();
+                }
+            }
+        }
+        process::Command::new("C:\\Program Files\\LGHUB\\system_tray\\lghub_system_tray.exe")
+            .spawn()
+            .unwrap();
+    }
 
-/// Callback that is invoked whenever a profile thumbnail is changed through the Profile Editor.
-pub fn on_image_edit(interface: &Interface) -> Result<Vec<Application>, ()> {
-    let (mut data, idx) = match interface.displayed_profile() {
-        Ok(ret) => ret,
-        Err(_) => return Err(()),
-    };
-    let mut app = data[idx].clone();
+    pub fn from_executable(app: AppWindow) -> () {
+        let executable = app.select_file("Executable", &["exe"], path::Path::new(""));
+        if executable.is_none() {
+            return;
+        }
+        let settings = LogitechSettings::new();
+        if let Some(application) =
+            settings.create_application(path::Path::new(&executable.unwrap()))
+        {
+            let game = Game::from_settings(application.clone());
+            settings.commit(application);
+            app.load_applications();
+            app.load_keymaps(&game);
+            app.set_active_application(game);
+        }
+        settings.close();
+    }
 
-    let path_selected = interface.select_file(
-        "Image",
-        &["png", "bmp"],
-        path::Path::new(&interface.ui.get_profile_field_img().to_string()),
-    )?;
+    pub fn from_process(app: AppWindow, process: Process) -> () {
+        let settings = LogitechSettings::new();
+        let application =
+            settings.new_application(path::Path::new(&process.executable.to_string()));
+        let profile = settings.new_default_profile(&application);
+        settings.commit(application.clone());
+        settings.commit(profile);
+        settings.close();
+        
+        let game = Game::from_settings(application.clone());
+        app.load_applications();
+        app.load_keymaps(&game);
+        app.set_active_application(game);
+    }
 
-    let img = Image::from_path(path::Path::new(&path_selected));
-    let bmp = img.save_to_cache(app.applicationId.clone());
-    let canon = safe_canonicalize(bmp.as_path());
-    interface
-        .ui
-        .set_profile_field_img(slint::SharedString::from(&canon));
-    app.posterPath = Some(canon);
-    data[idx] = app;
-    Ok(data)
-}
+    pub fn name_edit(app: AppWindow) -> () {
+        let settings = LogitechSettings::new();
+        let mut active = app.get_active_application();
+        let name = app.get_active_application_name();
+        active.name = name;
 
-/// Callback that is invoked whenever a profile executable location is changed through the Profile Editor.
-pub fn on_exec_edit(interface: &Interface) -> Result<Vec<Application>, ()> {
-    let (mut data, idx) = match interface.displayed_profile() {
-        Ok(ret) => ret,
-        Err(_) => return Err(()),
-    };
-    let mut app = data[idx].clone();
+        let application = settings.app_from_game(active);
+        settings.commit(application);
+        app.load_applications();
+        settings.close();
+    }
 
-    let path_selected = interface.select_file(
-        "Executable",
-        &["exe"],
-        path::Path::new(&interface.ui.get_profile_field_exec().to_string()),
-    )?;
-    interface
-        .ui
-        .set_profile_field_exec(slint::SharedString::from(&path_selected));
-    app.applicationPath = Some(path_selected);
-    data[idx] = app;
-    Ok(data)
-}
+    pub fn file_edit(
+        app: AppWindow,
+        implementation: impl FnOnce(&AppWindow) -> Option<String> + 'static,
+        handler: impl FnOnce(&mut Application, String),
+    ) -> () {
+        let image_path = match implementation(&app) {
+            Some(p) => p,
+            None => return,
+        };
 
-/// Callback that is invoked whenever a profile is deleted through the Forget button.
-pub fn on_forget_app(interface: &Interface) -> Result<Vec<Application>, ()> {
-    let (mut data, idx) = match interface.displayed_profile() {
-        Ok(ret) => ret,
-        Err(_) => return Err(()),
-    };
+        let active = app.get_active_application();
+        let settings = LogitechSettings::new();
+        let mut application = settings.app_from_game(active);
+        handler(&mut application, image_path);
+        let applications = settings.update_application(&application);
+        settings.commit(applications);
+        app.load_applications();
+        settings.close();
+    }
 
-    let app = data.remove(idx);
-    let app_profiles = interface.handler.find_profiles(&app);
+    pub fn forget_application(app: AppWindow) -> () {
+        let active = app.get_active_application();
+        if active.r#type != GameType::Custom {
+            return;
+        }
+        let settings = LogitechSettings::new();
+        let application = settings.app_from_game(active);
+        let applications = settings.remove_application(application);
+        settings.commit(applications);
+        app.load_applications();
+        app.set_active_application(Game::desktop());
+        settings.close();
+    }
 
-    let settings = interface.handler.settings().unwrap();
-    let mut profiles: Vec<Profile> = Vec::new();
+    pub fn new_key(app: AppWindow) -> () {
+        let active = app.get_active_application();
 
-    for profile in settings.profiles.profiles.iter() {
-        if !app_profiles.contains(profile) {
-            profiles.push(profile.clone());
+        let keybinds = app.get_keybinds();
+        let rc: slint::VecModel<Keybind> = slint::VecModel::default();
+
+        keybinds.iter().for_each(|item| rc.push(item));
+        rc.push(Keybind::new(
+            keybinds.row_count() as i32 + 1,
+            active.executable.to_string(),
+        ));
+        app.set_keybinds(slint::ModelRc::new(rc));
+    }
+
+    pub fn set_pointer(app: AppWindow, keybind: Keybind) -> () {
+        app.set_keymap(Keybind::pointer_listening(keybind.clone()));
+
+        unsafe {
+            key_input({
+                let weak = app.as_weak();
+                move |key| {
+                    let app = weak.unwrap();
+
+                    if key.is_none() {
+                        app.set_keymap(keybind);
+                        return;
+                    }
+                    let key = key.unwrap();
+                    let keybind = keybind.update_pointer(u64::from(&key));
+                    if keybind.input_object() != KeyboardKey::Escape {
+                        let settings = LogitechSettings::new();
+                        settings.add_keybind(&keybind);
+                        settings.close();
+                    }
+                    app.set_keymap(keybind);
+                }
+            })
         }
     }
 
-    interface.handler.commit(data, Some(profiles));
-    interface.reset_fields();
-    interface.handler.delete_image(app.applicationId);
+    pub fn set_object(app: AppWindow, keybind: Keybind) -> () {
+        app.set_keymap(Keybind::object_listening(keybind.clone()));
 
-    Err(()) // This is intentional. We have already commited our changes.
-}
+        unsafe {
+            key_input({
+                let weak = app.as_weak();
+                move |key| {
+                    let app = weak.unwrap();
 
-/// Callback that is invoked whenever a new profile should be added through an executable path.
-///
-/// This opens the File Explorer as a dialog to select the path.
-pub fn on_add_app(interface: &Interface) -> Result<Vec<Application>, ()> {
-    let selected = interface.select_file("Executable", &["exe"], path::Path::new(""))?;
-    let as_path = path::Path::new(&selected);
-    let (app, profiles) = interface.handler.create_application(as_path);
-    interface.handler.commit(app, Some(profiles));
-    interface.reset_fields();
-    Err(())
+                    if key.is_none() {
+                        app.set_keymap(keybind);
+                        return;
+                    }
+                    let key = key.unwrap();
+                    let keybind = keybind.update_object(u64::from(&key));
+                    if keybind.input_pointer() != KeyboardKey::Escape {
+                        let settings = LogitechSettings::new();
+                        settings.add_keybind(&keybind);
+                        settings.close();
+                    }
+                    app.set_keymap(keybind);
+                }
+            })
+        }
+    }
+
+    pub fn delete_key(app: AppWindow, keybind: Keybind) -> () {
+        let settings = LogitechSettings::new();
+        settings.remove_keybind(&keybind);
+        settings.close();
+        app.load_keymaps(&app.get_active_application());
+    }
 }

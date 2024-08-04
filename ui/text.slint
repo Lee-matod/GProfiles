@@ -1,11 +1,15 @@
-import "../assets/fonts/Roboto/Roboto-Regular.ttf";
-import "../assets/fonts/ArchivoBlack/ArchivoBlack-Regular.ttf";
+import { LineEdit } from "std-widgets.slint";
+import { HoverableComponent } from "components.slint";
 
-import { LineEdit, Button, StandardButton, TextEdit } from "std-widgets.slint";
+export enum FieldContentType { editable, interactable, viewable }
 
-export enum EditableType { file, text }
+export component Title inherits Text {
+    color: #01a7e1;
+    font-family: "Archivo Black";
+    font-size: 15px;
+}
 
-export component PrettyButton inherits Rectangle {
+export component PrettyButton inherits HoverableComponent {
     in property <image> icon;
     in property <string> text;
 
@@ -14,14 +18,11 @@ export component PrettyButton inherits Rectangle {
 
     border-radius: 5px;
 
-    animate background {
-        duration: 150ms;
-    }
-
     Image {
+        x: 10px;
         width: 24px;
         height: 24px;
-        x: 10px;
+        colorize: #000000;
         source: icon;
     }
 
@@ -33,22 +34,15 @@ export component PrettyButton inherits Rectangle {
     }
 }
 
-export component Title inherits Text {
-    color: #01a7e1;
-    font-family: "Archivo Black";
-    font-size: 15px;
-}
-
 export component EditableField inherits Rectangle {
-    callback clicked;
+    callback clicked();
 
-    in-out property <string> title;
-    in-out property <string> field;
-    in property <EditableType> type;
+    in property <string> title;
+    in-out property <string> content;
+    in property <FieldContentType> content-type;
+    in property <image> icon;
 
-    property <physical-length> spacing: 650px;
-
-    width: spacing;
+    width: 400px;
     height: 65px;
 
     Title {
@@ -58,45 +52,33 @@ export component EditableField inherits Rectangle {
     }
 
     Rectangle {
-        width: spacing;
+        width: 400px;
         height: 25px;
-
         border-radius: 5px;
         background: #000000;
 
-        if root.type == EditableType.text : LineEdit {
+        LineEdit {
             x: 5px;
-            width: spacing - 50px;
-
-            text <=> field;
-            font-size: 15px;
-        }        
-
-
-        if root.type == EditableType.file : Text {
-            x: 5px;
-            width: spacing - 50px;
-
-            text: field;
-            color: #ffffff;
-            font-size: 15px;
-            font-family: "Roboto";
-        }
-
-        if root.type == EditableType.file : TouchArea {
-            clicked => {
-                root.clicked();
+            height: 20px;
+            width: root.content-type != FieldContentType.viewable && root.icon.width != 0 ? 360px : 390px;
+            enabled: root.content-type != FieldContentType.viewable;
+            read-only: root.content-type == FieldContentType.interactable;
+            text <=> content;
+            accepted(string) => {
+                if root.content-type == FieldContentType.editable {
+                    root.clicked();
+                }
             }
         }
 
         Image {
+            x: 370px;
             width: 24px;
             height: 24px;
-            x: spacing - 25px;
             colorize: #ffffff;
-            source: root.type == EditableType.text ? @image-url("../assets/material_icons/save.png") : @image-url("../assets/material_icons/edit.png");
+            source: root.icon;
 
-            if root.type == EditableType.text : TouchArea {
+            if root.content-type == FieldContentType.interactable || root.content-type == FieldContentType.editable: TouchArea {
                 clicked => {
                     root.clicked();
                 }

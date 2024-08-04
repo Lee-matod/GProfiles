@@ -1,49 +1,59 @@
-import { ScrollView, LineEdit } from "std-widgets.slint";
+import "../assets/fonts/ArchivoBlack/ArchivoBlack-Regular.ttf";
+import "../assets/fonts/Roboto/Roboto-Regular.ttf";
 
-import { SlintAttribution } from "attribution.slint"; 
-import { ProcessSlint, ProcessView } from "processes.slint"; 
-import { ProfileSlint, ProfileView } from "profiles.slint";
-import { EditableField, EditableType, PrettyButton, Title } from "text.slint";
+import { Title, EditableField, FieldContentType, PrettyButton } from "text.slint";
+import { SlintAttribution } from "components.slint";
+import { Game, GameType, GameView, GameContainer } from "objects/games.slint";
+import { Process, ProcessContainer } from "objects/processes.slint";
+import { Keybind, Remapper } from "objects/keymapper.slint";
 
 export component AppWindow inherits Window {
-    callback name-edit();
-    callback image-edit();
-    callback exec-edit();
-
-    callback forget-app();
+    callback application-clicked(Game);
     callback restart-ghub();
 
-    callback add-app();
-    callback add-process(ProcessSlint);
+    callback from-executable();
+    callback from-process(Process);
 
-    callback dialog-lock-release();
-    callback dialog-lock-acquire();
-    dialog-lock-release() => {
-        dialog-lock = false;
-    }
-    dialog-lock-acquire() => {
-        dialog-lock = true;
-    }
+    callback name-edit();
+    callback image-edit();
+    callback executable-edit();
+    callback forget-application();
 
-    in-out property <[ProfileSlint]> profiles;
-    in-out property <[ProcessSlint]> processes;
-    in-out property <string> active-profile;
-    in-out property <string> profile-field-name;
-    in-out property <string> profile-field-img;
-    in-out property <string> profile-field-exec;
+    callback new-key();
+    callback set-pointer(Keybind);
+    callback set-object(Keybind);
+    callback delete-key(Keybind);
 
-    out property <string> search-text: search-box.text;
+    in-out property <[Keybind]> keybinds: [{ }, { }, { }, { }, { }];
+    in-out property <[Process]> processes: [{ }, { }, { }, { }, { }, { }, { }, { }];
+    in-out property <[Game]> applications: [
+        {
+            id: "APPLICATION_NAME_DESKTOP",
+            name: "Desktop",
+            icon: @image-url("../assets/material_icons/desktop.png"),
+            type: GameType.desktop
+        },
+        {
+            name: "Fortnite",
+            icon: @image-url("../assets/material_icons/desktop.png"),
+            type: GameType.installed
+        },
+        { },
+        { }
+    ];
+    in-out property <Game> active-application: applications[0];
+    in-out property <string> active-application-name: active-application.name;
+    in-out property <string> active-application-image: active-application.image-path;
+    in-out property <string> active-application-executable: active-application.executable;
+    out property <string> process-query;
 
-    property <bool> dialog-lock: false;
-    
     width: 960px;
     height: 540px;
-
     title: "GProfiles";
     icon: @image-url("../assets/app.ico");
     background: #000000;
 
-    scope := FocusScope {}
+    scope := FocusScope { }
 
     TouchArea {
         clicked => {
@@ -69,12 +79,39 @@ export component AppWindow inherits Window {
         text: "DETECTED APPLICATIONS";
     }
 
-    search-box := LineEdit {
-        x: 20px;
+    ProcessContainer {
+        x: -360px;
         y: 300px;
-        width: 200px;
-        height: 20px;
-        placeholder-text: "Search";
+        processes: processes;
+        query <=> process-query;
+        add-process(process) => {
+            root.from-process(process)
+        }
+    }
+
+    GameView {
+        y: 50px;
+        x: 50px;
+
+        application: { name: "NEW", icon: @image-url("../assets/material_icons/add.png") };
+        active: active-application;
+        image-override: #ffffff;
+
+        TouchArea {
+            clicked => {
+                root.from-executable();
+            }
+        }
+    }
+
+    GameContainer {
+        x: 250px;
+        y: 50px;
+        active-application: active-application;
+        applications: applications;
+        clicked(application) => {
+            root.application-clicked(application);
+        }
     }
 
     Rectangle {
@@ -93,14 +130,39 @@ export component AppWindow inherits Window {
             y: 70px;
         }
 
+        PrettyButton {
+            x: 20px;
+            y: 205px;
+            text: "FORGET";
+            icon: @image-url("../assets/material_icons/delete.png");
+            hover: #ff2e2e;
+            default: #e00d00;
+            clicked => {
+                root.forget-application();
+            }
+        }
+
+        PrettyButton {
+            x: 500px;
+            y: 205px;
+            width: 190px;
+            text: "RESTART LGHUB";
+            icon: @image-url("../assets/material_icons/refresh.png");
+            hover: #999999;
+            default: #666666;
+            clicked => {
+                root.restart-ghub();
+            }
+        }
+
         EditableField {
             x: 20px;
             y: 25px;
             title: "PROFILE NAME";
-            field <=> root.profile-field-name;
-            type: EditableType.text;
+            content <=> active-application-name;
+            content-type: active-application.type == GameType.desktop || active-application.type == GameType.installed ? FieldContentType.interactable : FieldContentType.editable;
+            icon: active-application.type == GameType.custom ? @image-url("../assets/material_icons/save.png") : @image-url("");
             clicked => {
-
                 root.name-edit();
             }
         }
@@ -109,8 +171,9 @@ export component AppWindow inherits Window {
             x: 20px;
             y: 85px;
             title: "IMAGE PATH";
-            field: root.profile-field-img;
-            type: EditableType.file;
+            content: active-application-image;
+            content-type: active-application.type == GameType.custom ? FieldContentType.editable : FieldContentType.viewable;
+            icon: active-application.type == GameType.custom ? @image-url("../assets/material_icons/edit.png") : @image-url("");
             clicked => {
                 root.image-edit();
             }
@@ -120,129 +183,36 @@ export component AppWindow inherits Window {
             x: 20px;
             y: 145px;
             title: "EXECUTABLE PATH";
-            field: root.profile-field-exec;
-            type: EditableType.file;
+            content: active-application-executable;
+            content-type: active-application.type == GameType.desktop ? FieldContentType.viewable : (active-application.type == GameType.installed ? FieldContentType.interactable : FieldContentType.editable);
+            icon: active-application.type == GameType.custom ? @image-url("../assets/material_icons/edit.png") : @image-url("");
             clicked => {
-                root.exec-edit()
-            }
-        }
-
-        forget-button := PrettyButton {
-            x: 20px;
-            y: 205px;
-
-            text: "FORGET";
-            icon: @image-url("../assets/material_icons/delete.png");
-            background: forget-area.has-hover ? #ff2e2e : #e00d0d;
-
-            animate background {
-                duration: 150ms;
-            }
-
-            forget-area := TouchArea {
-                clicked => {
-                    root.forget-app();
-                }
-            }
-        }
-
-        PrettyButton {
-            x: 500px;
-            y: 205px;
-            width: 190px;
-
-            text: "RESTART LGHUB";
-            icon: @image-url("../assets/material_icons/refresh.png");
-            background: apply-area.has-hover ? #999999 : #666666;
-
-            animate background {
-                duration: 150ms;
-            }
-
-            apply-area := TouchArea {
-                clicked => {
-                    root.restart-ghub();
-                }
-            }
-        }
-    }
-    
-    ProfileView {
-        y: 50px;
-        x: 50px;
-
-        active: active-profile;
-        profile: {
-            icon: @image-url("../assets/material_icons/add.png")
-        };
-
-        TouchArea {
-            clicked => {
-                root.add-app();
+                root.executable-edit();
             }
         }
 
         Title {
-            y: 160px;
-            text: "NEW";
-            color: #ffffff;
+            x: 440px;
+            y: 25px;
+            text: "KEY REMAPPER";
         }
-    }
 
-    // Profiles
-    ScrollView {
-        property <physical-length> spacing: 200px;
-        property <int> num-profiles: profiles.length;
+        Remapper {
+            x: 435px;
+            y: 45px;
+            keybinds: keybinds;
 
-        x: 250px;
-        y: 50px;
-        width: 700px;
-        height: 240px;
-        viewport-width: spacing * num-profiles;
-        viewport-height: 210px;
-
-        for i in num-profiles : Rectangle {
-            x: i * spacing;
-            width: 150px;
-            height: 210px;
-
-            ProfileView {
-                profile: profiles[i];
-                active: root.active-profile;
-                selected => {
-                    if !root.dialog-lock {
-                        root.active-profile = self.profile.id;
-                        root.profile-field-name = self.profile.name;
-                        root.profile-field-img = self.profile.image-path;
-                        root.profile-field-exec = self.profile.executable;
-                    }
-                }
+            new-key() => {
+                root.new-key();
             }
-        }
-    }
-    
-    // Processes
-    ScrollView {
-        property <physical-length> spacing: 35px;
-        property <int> num-processes: processes.length;
-
-        x: -380px;
-        y: 330px;
-        width: 630px;
-        height: 200px;
-        viewport-height: num-processes * spacing;
-
-        for i in num-processes : Rectangle {
-            x: 400px;
-            y: i * spacing;
-            height: 30px;
-            width: 200px;
-
-            ProcessView {
-                process: processes[i];
-                clicked(process) => {
-                    root.add-process(process);
-                }
+            set-pointer(keybind) => {
+                root.set-pointer(keybind);
+            }
+            set-object(keybind) => {
+                root.set-object(keybind);
+            }
+            delete-key(keybind) => {
+                root.delete-key(keybind);
             }
         }
     }

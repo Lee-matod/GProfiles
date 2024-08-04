@@ -1,0 +1,68 @@
+import { HoverableComponent } from "../components.slint";
+import { ScrollView, LineEdit } from "std-widgets.slint";
+
+export struct Process {
+    name: string,
+    executable: string,
+    icon: image,
+}
+
+export component ProcessView inherits HoverableComponent {
+    in property <Process> process;
+
+    width: 200px;
+    height: 30px;
+
+    border-radius: 5px;
+    hover: #707070;
+    default: #3b3b3b;
+
+    Text {
+        x: 35px;
+        width: 180px;
+        text: process.name;
+        color: #ffffff;
+        overflow: elide;
+        font-family: "Roboto Sans";
+    }
+
+    Image {
+        x: 5px;
+        width: 24px;
+        height: 24px;
+        source: root.process.icon;
+    }
+}
+
+export component ProcessContainer inherits Rectangle {
+    callback add-process(Process);
+
+    in-out property <[Process]> processes;
+    in-out property <string> query;
+
+    LineEdit {
+        y: 0px;
+        width: 200px;
+        height: 20px;
+        text <=> query;
+        placeholder-text: "Search";
+    }
+
+
+    ScrollView {
+        y: 25px;
+        width: 630px;
+        height: 200px;
+        viewport-height: processes.length * 35px;
+
+        for i in processes.length: ProcessView {
+            y: i * 35px;
+            height: 30px;
+            width: 200px;
+            process: processes[i];
+            clicked => {
+                root.add-process(self.process);
+            }
+        }
+    }
+}

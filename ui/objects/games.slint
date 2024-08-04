@@ -1,0 +1,96 @@
+import { ScrollView } from "std-widgets.slint";
+export enum GameType { custom, installed, desktop }
+
+export struct Game {
+    id: string,
+    name: string,
+    icon: image,
+    image-path: string,
+    executable: string,
+    type: GameType,
+}
+
+export component GameView inherits Rectangle {
+    callback clicked();
+    in property <Game> application;
+    in property <Game> active;
+    in property <color> image-override;
+
+    area := TouchArea {
+        clicked => {
+            root.clicked()
+        }
+    }
+
+    width: application == active ? 153px : 150px;
+    height: application == active ? 213px : 210px;
+    background: #3b3b3b;
+    border-radius: 5px;
+
+    animate width {
+        easing: ease-in;
+        duration: 150ms;
+    }
+
+    animate height {
+        easing: ease-in;
+        duration: 150ms;
+    }
+
+    Text {
+        y: 160px;
+        text: application.type == GameType.installed ? "" : application.name;
+        color: #ffffff;
+        font-size: 15px;
+        font-family: "Roboto Sans";
+        overflow: elide;
+    }
+
+    Image {
+        width: application.type == GameType.installed ? 150px : 48px;
+        height: application.type == GameType.installed ? 210px : 48px;
+        source: application.icon;
+        colorize: image-override;
+    }
+
+    if application.executable == "" && application.type == GameType.installed: Rectangle {
+        background: #00000075;
+
+        Text {
+            text: "NOT INSTALLED";
+            color: #ffffff;
+            font-family: "Roboto";
+        }
+    }
+
+    Rectangle {
+        border-radius: 5px;
+        border-width: area.has-hover || application == active ? 5px : 0px;
+        border-color: #65c1ff;
+
+        animate border-width { duration: 150ms; }
+    }
+}
+
+export component GameContainer inherits ScrollView {
+    callback clicked(Game);
+    in property <Game> active-application;
+    in property <[Game]> applications;
+
+    width: 700px;
+    height: 240px;
+    viewport-width: 200px * applications.length;
+    viewport-height: 210px;
+
+    for i in applications.length: GameView {
+        x: i * 200px;
+        width: 150px;
+        height: 210px;
+
+        application: applications[i];
+        active: active-application;
+        clicked => {
+            root.clicked(applications[i]);
+        }
+    }
+}

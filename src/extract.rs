@@ -1,7 +1,9 @@
+#![allow(unused)]
 use core::mem::MaybeUninit;
 use std::ffi::{OsStr, OsString};
+#[cfg(target_os = "windows")]
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
-use std::{mem, path};
+use std::{mem, path, thread};
 
 use image::RgbaImage;
 use windows::Win32::Foundation::{BOOL, HWND, LPARAM};
@@ -11,43 +13,48 @@ use windows::Win32::Graphics::Gdi::{
 };
 use windows::Win32::System::ProcessStatus::GetModuleFileNameExW;
 use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
+use windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;
 use windows::Win32::UI::Shell::{SHGetFileInfoW, SHFILEINFOW};
 use windows::Win32::UI::WindowsAndMessaging::{
-    DestroyIcon, EnumWindows, GetIconInfo, GetWindowTextW, GetWindowThreadProcessId,
-    IsWindowVisible, HICON, ICONINFO,
+    DestroyIcon, DispatchMessageW, EnumWindows, GetIconInfo, GetWindowTextW,
+    GetWindowThreadProcessId, IsWindowVisible, PeekMessageW, TranslateMessage, HICON, HWND_MESSAGE,
+    ICONINFO, MSG, PM_REMOVE,
 };
+
+use crate::remapper::KeyboardKey;
 
 static mut APPLICATIONS: Vec<(HWND, String)> = Vec::new();
 
-/// Safely tries to perform a canonicalization for a given path.
-pub fn safe_canonicalize(path: &path::Path) -> String {
-    let canon = match path.canonicalize() {
-        Ok(pathbuf) => pathbuf,
-        Err(_) => return path.to_string_lossy().to_string(),
-    };
-    let full_path = canon.to_string_lossy().to_string();
-    match full_path.strip_prefix("\\\\?\\") {
-        Some(stripped) => stripped.to_string(),
-        None => full_path,
-    }
+pub unsafe fn key_input(callback: impl FnOnce(Option<KeyboardKey>) + Send + 'static) -> () {
+    thread::spawn(move || {
+        let mut msg = MSG::default();
+
+        loop {
+            if PeekMessageW(&mut msg, HWND_MESSAGE, 0, 0, PM_REMOVE).as_bool() {
+                TranslateMessage(&msg);
+                DispatchMessageW(&msg);
+            }
+            for vkey in 1..=255 {
+                if GetAsyncKeyState(vkey as i32) as u16 & 0x8000 != 0 {
+                    let key = KeyboardKey::from(vkey as u64);
+                    if key == KeyboardKey::Escape {
+                        slint::invoke_from_event_loop(move || callback(None)).unwrap();
+                    } else {
+                        slint::invoke_from_event_loop(move || callback(Some(key))).unwrap();
+                    }
+                    return;
+                }
+            }
+        }
+    });
 }
 
-unsafe extern "system" fn enum_callback(hwnd: HWND, _: LPARAM) -> BOOL {
-    let mut buffer = [0u16; 512];
-    if GetWindowTextW(hwnd, &mut buffer) > 0 {
-        let title = String::from_utf16_lossy(&buffer);
-        APPLICATIONS.push((hwnd, title));
-    };
-    true.into()
-}
-
-/// Retrieves the executable paths of all currently running foreground applications.
 pub unsafe fn foreground_apps(needle: &str) -> Vec<path::PathBuf> {
     let mut foreground: Vec<path::PathBuf> = Vec::new();
     let mut active_windows: Vec<HWND> = Vec::new();
     APPLICATIONS.clear();
 
-    let _ = EnumWindows(Some(enum_callback), None);
+    EnumWindows(Some(enum_callback), None).unwrap();
     for (hwnd, title) in APPLICATIONS.clone() {
         if IsWindowVisible(hwnd).as_bool() && !title.is_empty() {
             active_windows.push(hwnd);
@@ -72,7 +79,11 @@ pub unsafe fn foreground_apps(needle: &str) -> Vec<path::PathBuf> {
             continue;
         };
 
+        #[cfg(target_os = "windows")]
         let module_filename = OsString::from_wide(&module_filename[..size as usize]);
+        #[cfg(target_os = "linux")]
+        let module_filename = OsString::new();
+
         let filepath: String = module_filename.to_string_lossy().to_string();
         let as_path = path::PathBuf::from(&filepath);
         let name = match as_path.file_name() {
@@ -84,10 +95,9 @@ pub unsafe fn foreground_apps(needle: &str) -> Vec<path::PathBuf> {
         };
         foreground.push(as_path);
     }
-    foreground
+    Vec::from(&foreground[..foreground.len() - 4])
 }
 
-/// Retrieves the icon attached to an executable through the given executable path.
 pub unsafe fn get_icon(path: &str) -> RgbaImage {
     let mut shfi = SHFILEINFOW {
         hIcon: HICON(0),
@@ -96,10 +106,15 @@ pub unsafe fn get_icon(path: &str) -> RgbaImage {
         szDisplayName: [0; 260],
         szTypeName: [0; 80],
     };
+
+    #[cfg(target_os = "windows")]
     let path: Vec<u16> = OsStr::new(path)
         .encode_wide()
         .chain(std::iter::once(0))
         .collect();
+    #[cfg(target_os = "linux")]
+    let path: Vec<u16> = vec![];
+
     SHGetFileInfoW(
         windows::core::PCWSTR(path.as_ptr()),
         windows::Win32::Storage::FileSystem::FILE_FLAGS_AND_ATTRIBUTES(0),
@@ -109,7 +124,7 @@ pub unsafe fn get_icon(path: &str) -> RgbaImage {
     );
     let hicon = shfi.hIcon;
     let image = hicon_to_image(hicon);
-    let _ = DestroyIcon(hicon);
+    DestroyIcon(hicon).unwrap();
     return image;
 }
 
@@ -122,7 +137,7 @@ unsafe fn hicon_to_image(icon: HICON) -> RgbaImage {
         hbmMask: HBITMAP(0),
         hbmColor: HBITMAP(0),
     };
-    let _ = GetIconInfo(icon, &mut info);
+    GetIconInfo(icon, &mut info).unwrap();
     DeleteObject(info.hbmMask);
     let mut bitmap: MaybeUninit<BITMAP> = MaybeUninit::uninit();
 
@@ -175,4 +190,13 @@ unsafe fn hicon_to_image(icon: HICON) -> RgbaImage {
         mem::swap(b, r);
     }
     RgbaImage::from_vec(width_u32, height_u32, bmp).unwrap()
+}
+
+unsafe extern "system" fn enum_callback(hwnd: HWND, _: LPARAM) -> BOOL {
+    let mut buffer = [0u16; 512];
+    if GetWindowTextW(hwnd, &mut buffer) > 0 {
+        let title = String::from_utf16_lossy(&buffer);
+        APPLICATIONS.push((hwnd, title));
+    };
+    true.into()
 }

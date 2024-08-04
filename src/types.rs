@@ -2,6 +2,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+use crate::utils::{APPLICATION_NAME_DESKTOP, PROFILE_NAME_DEFAULT};
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct JsonData {
     pub applications: InnerApplications,
@@ -128,12 +130,28 @@ impl Application {
         commands: Vec<Command>,
         version: usize,
     ) -> Application {
-        let mut app = Application::new(&String::from("APPLICATION_NAME_DESKTOP"), &applicationId);
+        let mut app = Application::new(&String::from(APPLICATION_NAME_DESKTOP), &applicationId);
         app.categoryColors = Some(categoryColors);
         app.commands = Some(commands);
         app.databaseId = Some(applicationId);
         app.version = Some(version);
         app
+    }
+
+    pub fn update(&mut self, app: Application) -> () {
+        self.name = app.name;
+        self.applicationId = app.applicationId;
+        self.applicationPath = app.applicationPath;
+        self.databaseId = app.databaseId;
+        self.categoryColors = app.categoryColors;
+        self.commands = app.commands;
+        self.version = app.version;
+        self.isCustom = app.isCustom;
+        self.posterPath = app.posterPath;
+        self.applicationFolder = app.applicationFolder;
+        self.isInstalled = app.isInstalled;
+        self.posterTitlePosition = app.posterTitlePosition;
+        self.posterUrl = app.posterUrl;
     }
 }
 
@@ -182,7 +200,7 @@ impl Into<Value> for Application {
             data["posterTitlePosition"] = self.posterTitlePosition.unwrap().into();
             data["posterUrl"] = self.posterUrl.unwrap().into();
         }
-        if self.name == "APPLICATION_NAME_DESKTOP" || self.isInstalled.is_some() {
+        if self.name == APPLICATION_NAME_DESKTOP || self.isInstalled.is_some() {
             data["categoryColors"] = self.categoryColors.unwrap().into();
             data["commands"] = self.commands.unwrap().into();
             data["databaseId"] = self.databaseId.unwrap().into();
@@ -250,6 +268,26 @@ pub struct Profile {
     pub id: String,
     pub name: String,
     pub assignments: Vec<Assignment>,
+}
+
+impl Profile {
+    pub fn default(id: &String, assignments: Vec<Assignment>) -> Profile {
+        Profile {
+            activeForApplication: true,
+            applicationId: id.clone(),
+            id: id.clone(),
+            name: PROFILE_NAME_DEFAULT.to_string(),
+            assignments,
+        }
+    }
+
+    pub fn update(&mut self, profile: Profile) -> () {
+        self.activeForApplication = profile.activeForApplication;
+        self.applicationId = profile.applicationId;
+        self.id = profile.id;
+        self.name = profile.name;
+        self.assignments = profile.assignments;
+    }
 }
 
 impl Clone for Profile {

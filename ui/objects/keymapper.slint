@@ -1,0 +1,152 @@
+import { HoverableComponent } from "../components.slint";
+import { ScrollView } from "std-widgets.slint";
+import { Title } from "../text.slint";
+
+export struct Keybind {
+    index: int,
+    pointer: string,
+    object: string,
+    executable: string,
+    vkey-pointer: int,
+    vkey-object: int,
+}
+
+
+export component KeybindView inherits Rectangle {
+    callback set-pointer();
+    callback set-object();
+    callback delete();
+
+    in property <Keybind> keybind;
+
+    HoverableComponent {
+        x: 0px;
+        width: 90px;
+        border-radius: 5px;
+        hover: #999999;
+        default: #666666;
+
+        Text {
+            text: keybind.pointer;
+            font-family: "Archivo Black";
+            color: #000000;
+        }
+
+        clicked => {
+            root.set-pointer();
+        }
+    }
+
+    Image {
+        x: 91px;
+        width: 24px;
+        height: 24px;
+        colorize: #ffffff;
+        source: @image-url("../../assets/material_icons/arrow_right.png");
+    }
+
+    HoverableComponent {
+        x: 115px;
+        width: 90px;
+        border-radius: 5px;
+        hover: #999999;
+        default: #666666;
+
+        Text {
+            text: keybind.object;
+            font-family: "Archivo Black";
+            color: #000000;
+        }
+
+        clicked => {
+            root.set-object();
+        }
+    }
+
+    HoverableComponent {
+        x: 215px;
+        width: 24px;
+        border-radius: 5px;
+        hover: #ff2e2e;
+        default: #e00d0d;
+
+        Image {
+            width: 24px;
+            height: 24px;
+            colorize: #000000;
+            source: @image-url("../../assets/material_icons/delete.png");
+        }
+
+        clicked => {
+            root.delete();
+        }
+    }
+}
+
+export component Remapper inherits Rectangle {
+    callback new-key();
+    callback set-pointer(Keybind);
+    callback set-object(Keybind);
+    callback delete-key(Keybind);
+
+    in-out property <[Keybind]> keybinds;
+
+    x: 0px;
+    y: 20px;
+    width: 255px;
+    height: 145px;
+    background: #000000;
+    border-radius: 5px;
+
+    ScrollView {
+        viewport-height: (keybinds.length + 1) * 30px + 10px;
+
+        for i in keybinds.length: KeybindView {
+            y: i * 30px + 10px;
+            width: 240px;
+            height: 25px;
+            keybind: keybinds[i];
+
+            set-pointer => {
+                root.set-pointer(keybinds[i]);
+            }
+            set-object => {
+                root.set-object(keybinds[i]);
+            }
+            delete => {
+                root.delete-key(keybinds[i]);
+            }
+        }
+
+        HoverableComponent {
+            y: keybinds.length * 30px + 10px;
+            width: 240px;
+            height: 25px;
+
+            default: #000000;
+            hover: #252525;
+
+            border-radius: 5px;
+            border-width: 2px;
+            border-color: #666666;
+
+            clicked => {
+                root.new-key();
+            }
+
+            Image {
+                x: 5px;
+                height: 20px;
+                width: 20px;
+                colorize: #ffffff;
+                source: @image-url("../../assets/material_icons/add.png");
+            }
+
+            Text {
+                x: 30px;
+                text: "Add new key...";
+                color: #ffffff;
+            }
+        }
+    }
+}

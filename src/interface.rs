@@ -1,74 +1,40 @@
-use std::{path, thread, time};
+use std::path;
+use std::sync::mpsc;
+use std::thread;
+use std::time::Duration;
 
 use rfd::FileDialog;
-use slint::{ComponentHandle, Model, SharedString};
+use slint::{ComponentHandle, Model, Weak};
 
-use crate::extract::{foreground_apps, get_icon, safe_canonicalize};
-use crate::handler::BackgroundHandler;
-use crate::load::Image;
+use crate::extract::foreground_apps;
+use crate::remapper;
+use crate::remapper::listener;
+use crate::settings::LogitechSettings;
 use crate::types::Application;
-use crate::{AppWindow, ProcessSlint};
+use crate::{AppWindow, Game, GameType, Keybind, Process};
 
-pub struct Interface {
-    pub ui: AppWindow,
-    pub handler: BackgroundHandler,
-}
+impl AppWindow {
+    pub fn selected_application(&self) -> Option<Application> {
+        let settings = LogitechSettings::new();
+        let apps: Vec<Application> = settings.get_applications();
+        settings.close();
 
-impl Interface {
-    /// Creates an Interface that helps manage the front-end of the application.
-    ///
-    /// This calls `BackgroundHandler::new`, so it should only be called during app initialization.
-    pub fn new(ui: AppWindow) -> Self {
-        let handler = BackgroundHandler::new(ui.as_weak().unwrap());
-        Interface { ui, handler }
-    }
-
-    /// Creates a dummy Interface for the sake of easing other tasks.
-    pub fn dummy(ui: AppWindow) -> Self {
-        let handler = BackgroundHandler::dummy(ui.as_weak().unwrap());
-        Interface { ui, handler }
-    }
-
-    /// Starts the application.
-    pub fn start(&self) -> Result<&Self, slint::PlatformError> {
-        self.handler.load_profiles();
-        self.start_process_thread();
-        self.ui.run()?;
-        Ok(self)
-    }
-
-    /// Clears selected profile, name field, image field, and executable field.
-    pub fn reset_fields(&self) -> () {
-        self.ui.set_active_profile(slint::SharedString::new());
-        self.ui.set_profile_field_name(slint::SharedString::new());
-        self.ui.set_profile_field_img(slint::SharedString::new());
-        self.ui.set_profile_field_exec(slint::SharedString::new());
-    }
-
-    /// Returns the currently selected application's index.
-    pub fn displayed_profile(&self) -> Result<(Vec<Application>, usize), ()> {
-        let data = self.handler.settings().unwrap().applications.applications;
-        let profile_id = self.ui.get_active_profile();
-        if profile_id == "" {
-            return Err(());
-        }
-        let idx = &match data
+        let active = self.get_active_application();
+        match apps
             .iter()
-            .position(|prof| prof.applicationId == profile_id.to_string())
+            .find(|item| item.applicationId == active.id.to_string())
         {
-            Some(res) => res,
-            None => return Err(()),
-        };
-        Ok((data, *idx))
+            Some(app) => Some(app.clone()),
+            None => None,
+        }
     }
 
-    /// Opens a File Explorer dialog to choose a file.
     pub fn select_file(
         &self,
         extension_name: &str,
         extensions: &[&str],
         directory: &path::Path,
-    ) -> Result<String, ()> {
+    ) -> Option<String> {
         let executable = FileDialog::new()
             .add_filter(extension_name, extensions)
             .set_directory(directory)
@@ -77,70 +43,125 @@ impl Interface {
         match executable {
             Some(item) => {
                 let path_str = item.to_string_lossy().to_string();
-                Ok(path_str)
+                Some(path_str)
             }
-            None => Err(()),
+            None => None,
         }
     }
 
-    fn start_process_thread(&self) {
-        let reference = self.ui.as_weak();
-        thread::spawn(move || {
-            loop {
-                let reference = reference.clone();
-                slint::invoke_from_event_loop(move || {
-                    let ui = reference.unwrap();
-                    let needle = ui.get_search_text();
+    pub fn load_applications(&self) -> () {
+        let settings = LogitechSettings::new();
+        let applications = settings.get_applications();
+        let games: slint::VecModel<Game> = slint::VecModel::default();
+        for app in applications.iter() {
+            let component = Game::from_settings(app.clone());
+            if component.r#type == GameType::Desktop {
+                games.insert(0, component);
+            } else {
+                games.push(component);
+            }
+        }
+        self.set_applications(slint::ModelRc::new(games));
+        settings.close();
+    }
 
-                    let running_processes =
-                        unsafe { foreground_apps(&needle.to_lowercase().as_str()) };
-                    let displayed_profiles = ui.get_profiles();
-                    let slint_model = slint::VecModel::default();
+    pub fn load_processes(&self, query: &str) -> () {
+        let foreground = unsafe { foreground_apps(query) };
+        let apps = self.get_applications();
+        let processes: slint::VecModel<Process> = slint::VecModel::default();
+        for proc in foreground {
+            if apps.iter().any(|p| p.executable == proc.to_string_lossy()) {
+                continue;
+            }
+            processes.push(Process::from_exec(proc.as_path()));
+        }
+        self.set_processes(slint::ModelRc::new(processes));
+    }
 
-                    for path in running_processes {
-                        let filename = path.file_name().unwrap(); // We already verified this in foreground_apps
-                        if displayed_profiles
-                            .iter()
-                            .any(|p| p.executable == &path.to_string_lossy())
-                        {
+    pub fn set_keymap(&self, keybind: Keybind) -> () {
+        let current_model = self.get_keybinds();
+        let mut current = Vec::from_iter(current_model.iter());
+        match current.iter().position(|item| item.index == keybind.index) {
+            Some(index) => {
+                current.remove(index);
+                current.insert(index, keybind);
+            }
+            None => {
+                current.push(keybind);
+            }
+        };
+        self.set_keybinds(slint::ModelRc::new(slint::VecModel::from(current)));
+    }
+
+    pub fn load_keymaps(&self, application: &Game) -> () {
+        let settings = LogitechSettings::new();
+        let keybinds = settings.get_keybinds(&application.executable.to_string());
+        let rc: slint::VecModel<Keybind> = slint::VecModel::default();
+        for key in keybinds {
+            if key.is_err() {
+                continue;
+            }
+            rc.push(key.unwrap());
+        }
+        self.set_keybinds(slint::ModelRc::new(rc));
+        settings.close();
+    }
+
+    pub fn start(&self) -> () {
+        thread::spawn({
+            let weak = self.as_weak();
+            move || AppWindow::background_task(weak)
+        });
+        thread::spawn(move || unsafe {
+            listener::set_hook();
+        });
+
+        self.load_applications();
+        self.load_processes("");
+        self.load_keymaps(&Game::desktop());
+        self.run().unwrap();
+    }
+
+    fn background_task(weak: Weak<AppWindow>) -> () {
+        loop {
+            let (sender, receiver) = mpsc::channel();
+            slint::invoke_from_event_loop({
+                let weak = weak.clone();
+                move || {
+                    let app = weak.unwrap();
+                    sender.send(app.get_process_query().to_string()).unwrap();
+                }
+            })
+            .unwrap();
+            let query = receiver.recv().unwrap();
+
+            let foreground = unsafe { foreground_apps(&query) };
+
+            slint::invoke_from_event_loop({
+                let weak = weak.clone();
+                let foreground = foreground.clone();
+                move || {
+                    let app = weak.unwrap();
+                    let apps = app.get_applications();
+
+                    let processes: slint::VecModel<Process> = slint::VecModel::default();
+                    for proc in foreground.iter() {
+                        if apps.iter().any(|p| p.executable == proc.to_string_lossy()) {
                             continue;
                         }
-                        let filepath = safe_canonicalize(path.as_path());
-                        let img = Image::from_rgba(unsafe { get_icon(&filepath) });
-                        let rgba = img.load_from_cache();
-                        slint_model.push(ProcessSlint {
-                            name: SharedString::from(filename.to_str().unwrap()),
-                            executable: SharedString::from(filepath),
-                            icon: slint::Image::from_rgba8(
-                                slint::SharedPixelBuffer::clone_from_slice(
-                                    rgba.as_raw(),
-                                    rgba.width(),
-                                    rgba.height(),
-                                ),
-                            ),
-                        })
+                        processes.push(Process::from_exec(proc.as_path()));
                     }
-                    let displayed_processes = ui.get_processes();
-                    let model_rc = slint::ModelRc::new(slint_model);
-                    if displayed_processes.row_count() == model_rc.row_count() {
-                        // No difference between displayed process list and actual process list.
-                        // We don't have to update the UI.
-                        return;
-                    };
-                    ui.set_processes(model_rc);
-                })
-                .unwrap();
-                thread::sleep(time::Duration::from_millis(500));
-            }
-        });
-    }
-}
 
-impl Clone for Interface {
-    fn clone(&self) -> Self {
-        Interface {
-            ui: self.ui.as_weak().unwrap(),
-            handler: self.handler.clone(),
+                    app.set_processes(slint::ModelRc::new(processes));
+                }
+            })
+            .unwrap();
+
+            if let Some(top) = foreground.get(0) {
+                remapper::set_keymap(&top.to_string_lossy().to_string())
+            }
+
+            thread::sleep(Duration::from_millis(500))
         }
     }
 }
