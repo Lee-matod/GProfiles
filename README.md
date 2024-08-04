@@ -1,6 +1,8 @@
 # GProfiles
 
-An objectively better way to manage custom Logitech GHUB gaming profiles.
+An objectively better way to manage your Logitech GHUB gaming profiles.
+
+This application was made with the intent of complementing the already existing [Logitech G HUB](https://www.logitechg.com/en-us/innovation/g-hub.html).
 
 # Installation
 
@@ -42,24 +44,19 @@ You can also move or create a shortcut to the `GProfiles.exe` executable file cr
 
 # Features
 
+- Simple and minimalistic design. One window with all features right in front of your eyes.
 - Intuitive running processes detection.
 - Easy profile customization (rename profiles, change icons, and more).
 - Built-in LGHUB restart button to apply changes.
 - Native executable icon transparency.
+- Per-application keyboard key remapping.
 
-# To-do
+# FAQ
 
-While I personally consider this project as finished, there are a couple of additional feature I would like to include in the future.
-These are, in order of priority:
+### Where can I find my profiles/keymaps?
 
-1. ~~Write an install script so GProfiles is easier to install on the user-end.~~ I replaced this with a bundled executable.
-2. ~~Remove `processes` as a dependency and just use `sysinfo`.~~
-3. ~~When creating a new profile, use its icon image as the default poster, rather than a preset image.~~
-4. Convert a custom application to an emulated installed application.
-   - This would allow a banner to be used instead of a `.bmp` image for the profile.
-   - An identifier should be placed in the JSON blob to ensure editing is allowed for future instances.
-5. Automatically scan for applications.
-   - Logitech GHUB already includes this feature. However, it has a reputation for not properly detecting all installed games.
+GProfiles stores application keymaps in `settings.db`, the same file where Logitech GHUB stores game profiles. You can create a copy/backup of it, and then replace it in the future. Both GProfiles and Logitech GHUB should work without any additional hassle.  
+You can locate this file by searching for `%LOCALAPPDATA%/LGHUB` in the File Explorer or the Run application.
 
 # Disclaimers
 
