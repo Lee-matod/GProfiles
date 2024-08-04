@@ -106,10 +106,13 @@ impl Callbacks {
         let application = settings.app_from_game(active);
         let applications = settings.remove_application(application);
         settings.commit(applications);
-        app.load_applications();
-        app.set_active_application(Game::desktop());
         settings.close();
-    }
+
+        let desktop = Game::desktop();
+        app.load_applications();
+        app.load_keymaps(&desktop);
+        app.set_active_application(desktop);
+}
 
     pub fn new_key(app: AppWindow) -> () {
         let active = app.get_active_application();
