@@ -95,7 +95,7 @@ pub unsafe fn foreground_apps(needle: &str) -> Vec<path::PathBuf> {
         };
         foreground.push(as_path);
     }
-    Vec::from(&foreground[..foreground.len() - 4])
+    foreground
 }
 
 pub unsafe fn get_icon(path: &str) -> RgbaImage {
