@@ -1,4 +1,5 @@
-use std::{fs, path};
+use std::fs;
+use std::path;
 
 use image::imageops::FilterType;
 use image::io::Reader as ImageReader;
@@ -94,7 +95,7 @@ impl From<&path::Path> for Image {
                 reader: image::load_from_memory(BROKEN_IMAGE_ICON).unwrap(),
             }
         } else if value.extension().unwrap() == "exe" {
-            Image::from(unsafe { get_icon(&safe_canonicalize(value)) })
+            Image::from(unsafe { get_icon(&safe_canonicalize(value)).unwrap() })
                 .with_filename(value.file_stem().unwrap().to_string_lossy().to_string())
         } else {
             let reader = ImageReader::open(value)

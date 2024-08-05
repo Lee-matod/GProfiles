@@ -10,12 +10,13 @@ use crate::Game;
 use super::{Commit, LogitechSettings};
 
 impl LogitechSettings {
-    pub fn app_from_game(&self, game: Game) -> Application {
+    pub fn app_from_game(&self, game: Game) -> Option<Application> {
         let apps = self.get_applications();
-        apps.iter()
-            .find(|app| app.applicationId == game.id.to_string())
-            .unwrap()
-            .clone()
+        Some(
+            apps.iter()
+                .find(|app| app.applicationId == game.id.to_string())?
+                .clone(),
+        )
     }
 
     pub fn create_application(&self, executable: &path::Path) -> Option<Application> {
@@ -49,7 +50,7 @@ impl LogitechSettings {
     }
 
     pub fn get_applications(&self) -> Vec<Application> {
-        let settings = self.get_settings();
+        let settings = self.get_settings().unwrap();
         settings.applications.applications
     }
 
@@ -61,24 +62,22 @@ impl LogitechSettings {
             .clone()
     }
 
-    pub fn update_application(&self, application: &Application) -> Vec<Application> {
+    pub fn update_application(&self, application: &Application) -> Option<Vec<Application>> {
         let mut apps = self.get_applications();
         let idx = apps
             .iter()
-            .position(|app| app.applicationId == application.applicationId)
-            .unwrap();
+            .position(|app| app.applicationId == application.applicationId)?;
         apps.remove(idx);
         apps.insert(idx, application.clone());
-        apps
+        Some(apps)
     }
 
-    pub fn remove_application(&self, application: Application) -> Vec<Application> {
+    pub fn remove_application(&self, application: Application) -> Option<Vec<Application>> {
         let mut apps = self.get_applications();
         let idx = apps
             .iter()
-            .position(|app| app.applicationId == application.applicationId)
-            .unwrap();
+            .position(|app| app.applicationId == application.applicationId)?;
         apps.remove(idx);
-        apps
+        Some(apps)
     }
 }

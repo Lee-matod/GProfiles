@@ -1,3 +1,4 @@
+use windows::core::Error;
 use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     SendInput, INPUT, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, VIRTUAL_KEY,
@@ -30,12 +31,8 @@ unsafe extern "system" fn keyboard_hook(n_code: i32, w_param: WPARAM, l_param: L
     CallNextHookEx(None, n_code, w_param, l_param)
 }
 
-pub unsafe fn set_hook() -> () {
-    let h_hook = SetWindowsHookExA(WH_KEYBOARD_LL, Some(keyboard_hook), None, 0);
-
-    if h_hook.is_err() {
-        return;
-    }
+pub unsafe fn set_hook() -> Result<(), Error> {
+    let h_hook = SetWindowsHookExA(WH_KEYBOARD_LL, Some(keyboard_hook), None, 0)?;
 
     let mut msg = MSG::default();
     while GetMessageW(&mut msg, None, 0, 0).as_bool() {
@@ -43,5 +40,6 @@ pub unsafe fn set_hook() -> () {
         DispatchMessageW(&msg);
     }
 
-    UnhookWindowsHookEx(h_hook.unwrap()).unwrap();
+    UnhookWindowsHookEx(h_hook)?;
+    Ok(())
 }

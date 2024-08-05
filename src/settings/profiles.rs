@@ -12,13 +12,13 @@ impl LogitechSettings {
     }
 
     pub fn get_profiles(&self) -> Vec<Profile> {
-        let settings = self.get_settings();
+        let settings = self.get_settings().unwrap();
         settings.profiles.profiles
     }
 
     pub fn get_profiles_for(&self, app: &Application) -> Vec<Profile> {
         let profiles = self.get_profiles();
-        let mut matches = vec![];
+        let mut matches = Vec::new();
         for profile in profiles {
             if profile.applicationId == app.applicationId {
                 matches.push(profile.clone());
@@ -35,14 +35,11 @@ impl LogitechSettings {
             .clone()
     }
 
-    pub fn update_profile(&self, profile: &Profile) -> Vec<Profile> {
+    pub fn update_profile(&self, profile: &Profile) -> Option<Vec<Profile>> {
         let mut profiles = self.get_profiles();
-        let idx = profiles
-            .iter()
-            .position(|prof| prof.id == profile.id)
-            .unwrap();
+        let idx = profiles.iter().position(|prof| prof.id == profile.id)?;
         profiles.remove(idx);
         profiles.insert(idx, profile.clone());
-        profiles
+        Some(profiles)
     }
 }

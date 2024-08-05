@@ -6,15 +6,17 @@ use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use std::{mem, path, thread};
 
 use image::RgbaImage;
+use windows::core::{Result, PCWSTR};
 use windows::Win32::Foundation::{BOOL, HWND, LPARAM};
 use windows::Win32::Graphics::Gdi::{
     DeleteObject, GetBitmapBits, GetDC, GetObjectW, ReleaseDC, BITMAP, BITMAPINFOHEADER, HBITMAP,
     HGDIOBJ,
 };
+use windows::Win32::Storage::FileSystem::FILE_FLAGS_AND_ATTRIBUTES;
 use windows::Win32::System::ProcessStatus::GetModuleFileNameExW;
 use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
 use windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;
-use windows::Win32::UI::Shell::{SHGetFileInfoW, SHFILEINFOW};
+use windows::Win32::UI::Shell::{SHGetFileInfoW, SHFILEINFOW, SHGFI_FLAGS};
 use windows::Win32::UI::WindowsAndMessaging::{
     DestroyIcon, DispatchMessageW, EnumWindows, GetIconInfo, GetWindowTextW,
     GetWindowThreadProcessId, IsWindowVisible, PeekMessageW, TranslateMessage, HICON, HWND_MESSAGE,
@@ -98,7 +100,7 @@ pub unsafe fn foreground_apps(needle: &str) -> Vec<path::PathBuf> {
     foreground
 }
 
-pub unsafe fn get_icon(path: &str) -> RgbaImage {
+pub unsafe fn get_icon(path: &str) -> Result<RgbaImage> {
     let mut shfi = SHFILEINFOW {
         hIcon: HICON(0),
         iIcon: 0,
@@ -116,20 +118,20 @@ pub unsafe fn get_icon(path: &str) -> RgbaImage {
     let path: Vec<u16> = vec![];
 
     SHGetFileInfoW(
-        windows::core::PCWSTR(path.as_ptr()),
-        windows::Win32::Storage::FileSystem::FILE_FLAGS_AND_ATTRIBUTES(0),
+        PCWSTR(path.as_ptr()),
+        FILE_FLAGS_AND_ATTRIBUTES(0),
         Some(&mut shfi),
         std::mem::size_of::<u32>() as u32,
-        windows::Win32::UI::Shell::SHGFI_FLAGS(0x000000100),
+        SHGFI_FLAGS(0x000000100),
     );
     let hicon = shfi.hIcon;
     let image = hicon_to_image(hicon);
-    DestroyIcon(hicon).unwrap();
+    DestroyIcon(hicon)?;
     return image;
 }
 
-unsafe fn hicon_to_image(icon: HICON) -> RgbaImage {
-    let biheader_size_u32 = u32::try_from(mem::size_of::<BITMAPINFOHEADER>()).unwrap();
+unsafe fn hicon_to_image(icon: HICON) -> Result<RgbaImage> {
+    let biheader_size_u32 = u32::try_from(mem::size_of::<BITMAPINFOHEADER>())?;
     let mut info = ICONINFO {
         fIcon: BOOL(0),
         xHotspot: 0,
@@ -137,7 +139,7 @@ unsafe fn hicon_to_image(icon: HICON) -> RgbaImage {
         hbmMask: HBITMAP(0),
         hbmColor: HBITMAP(0),
     };
-    GetIconInfo(icon, &mut info).unwrap();
+    GetIconInfo(icon, &mut info)?;
     DeleteObject(info.hbmMask);
     let mut bitmap: MaybeUninit<BITMAP> = MaybeUninit::uninit();
 
@@ -149,10 +151,10 @@ unsafe fn hicon_to_image(icon: HICON) -> RgbaImage {
 
     let bitmap = bitmap.assume_init_ref();
 
-    let width_u32 = u32::try_from(bitmap.bmWidth).unwrap();
-    let height_u32 = u32::try_from(bitmap.bmHeight).unwrap();
-    let width_usize = usize::try_from(bitmap.bmWidth).unwrap();
-    let height_usize = usize::try_from(bitmap.bmHeight).unwrap();
+    let width_u32 = u32::try_from(bitmap.bmWidth)?;
+    let height_u32 = u32::try_from(bitmap.bmHeight)?;
+    let width_usize = usize::try_from(bitmap.bmWidth)?;
+    let height_usize = usize::try_from(bitmap.bmHeight)?;
     let buf_size = width_usize
         .checked_mul(height_usize)
         .and_then(|size| size.checked_mul(4))
@@ -189,7 +191,7 @@ unsafe fn hicon_to_image(icon: HICON) -> RgbaImage {
         let [b, _, r, _] = chunk else { unreachable!() };
         mem::swap(b, r);
     }
-    RgbaImage::from_vec(width_u32, height_u32, bmp).unwrap()
+    Ok(RgbaImage::from_vec(width_u32, height_u32, bmp).unwrap())
 }
 
 unsafe extern "system" fn enum_callback(hwnd: HWND, _: LPARAM) -> BOOL {

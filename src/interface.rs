@@ -23,17 +23,18 @@ impl AppWindow {
     }
 
     pub fn selected_application(&self) -> Option<Application> {
-        let settings = LogitechSettings::new();
+        let settings = LogitechSettings::new()?;
         let apps: Vec<Application> = settings.get_applications();
-        settings.close();
+        settings.close()?;
 
         let active = self.get_active_application();
-        match apps
+        if let Some(app) = apps
             .iter()
             .find(|item| item.applicationId == active.id.to_string())
         {
-            Some(app) => Some(app.clone()),
-            None => None,
+            Some(app.clone())
+        } else {
+            None
         }
     }
 
@@ -48,17 +49,16 @@ impl AppWindow {
             .set_directory(directory)
             .pick_file();
 
-        match executable {
-            Some(item) => {
-                let path_str = item.to_string_lossy().to_string();
-                Some(path_str)
-            }
-            None => None,
+        if let Some(item) = executable {
+            let path_str = item.to_string_lossy().to_string();
+            Some(path_str)
+        } else {
+            None
         }
     }
 
-    pub fn load_applications(&self) -> () {
-        let settings = LogitechSettings::new();
+    pub fn load_applications(&self) -> Option<()> {
+        let settings = LogitechSettings::new()?;
         let applications = settings.get_applications();
         let games: slint::VecModel<Game> = slint::VecModel::default();
         for app in applications.iter() {
@@ -70,7 +70,8 @@ impl AppWindow {
             }
         }
         self.set_applications(slint::ModelRc::new(games));
-        settings.close();
+        settings.close()?;
+        Some(())
     }
 
     pub fn load_processes(&self, query: &str) -> () {
@@ -101,18 +102,20 @@ impl AppWindow {
         self.set_keybinds(slint::ModelRc::new(slint::VecModel::from(current)));
     }
 
-    pub fn load_keymaps(&self, application: &Game) -> () {
-        let settings = LogitechSettings::new();
-        let keybinds = settings.get_keybinds(&application.executable.to_string());
+    pub fn load_keymaps(&self, application: &Game) -> Option<()> {
+        let settings = LogitechSettings::new()?;
+        let keybinds = settings
+            .get_keybinds(&application.executable.to_string())
+            .ok()?;
         let rc: slint::VecModel<Keybind> = slint::VecModel::default();
         for key in keybinds {
-            if key.is_err() {
-                continue;
+            if let Ok(key) = key {
+                rc.push(key)
             }
-            rc.push(key.unwrap());
         }
         self.set_keybinds(slint::ModelRc::new(rc));
-        settings.close();
+        settings.close()?;
+        Some(())
     }
 
     pub fn start(&self) -> () {
@@ -121,12 +124,12 @@ impl AppWindow {
             move || AppWindow::background_task(weak)
         });
         thread::spawn(move || unsafe {
-            listener::set_hook();
+            listener::set_hook().unwrap();
         });
 
-        self.load_applications();
+        self.load_applications().unwrap();
         self.load_processes("");
-        self.load_keymaps(&Game::desktop());
+        self.load_keymaps(&Game::desktop()).unwrap();
         self.run().unwrap();
     }
 
@@ -166,7 +169,7 @@ impl AppWindow {
             .unwrap();
 
             if let Some(top) = foreground.get(0) {
-                remapper::set_keymap(&top.to_string_lossy().to_string())
+                remapper::set_keymap(&top.to_string_lossy().to_string()).unwrap();
             }
 
             thread::sleep(Duration::from_millis(500))
