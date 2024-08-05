@@ -11,7 +11,13 @@ static mut ACTIVE_KEYMAP: RwLock<Option<HashMap<u16, u16>>> = RwLock::new(None);
 
 pub fn set_keymap(executable: &String) -> Option<()> {
     let settings = LogitechSettings::new()?;
-    let keybinds = settings.get_keybinds(executable).ok()?;
+    let application = match settings.get_application(executable) {
+        Some(app) => app,
+        None => settings.get_desktop_application(),
+    };
+    let keybinds = settings
+        .get_keybinds(&application.applicationPath.unwrap_or(String::new()))
+        .ok()?;
 
     let mut new_keymap: HashMap<u16, u16> = HashMap::new();
     for keybind in keybinds {

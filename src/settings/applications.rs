@@ -54,6 +54,20 @@ impl LogitechSettings {
         settings.applications.applications
     }
 
+    pub fn get_application(&self, executable: &String) -> Option<Application> {
+        let apps = self.get_applications();
+        Some(
+            apps.iter()
+                .find(|item| {
+                    if let Some(app_folder) = &item.applicationFolder {
+                        return app_folder == executable;
+                    }
+                    false
+                })?
+                .clone(),
+        )
+    }
+
     pub fn get_desktop_application(&self) -> Application {
         let apps = self.get_applications();
         apps.iter()
