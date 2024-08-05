@@ -109,8 +109,8 @@ impl Commit<Application> for LogitechSettings {
             .iter()
             .find(|app| app.applicationId == settings.applicationId)
         {
-            Some(app) => {
-                let new_apps = self.update_application(app);
+            Some(_) => {
+                let new_apps = self.update_application(&settings);
                 self.commit(new_apps);
             }
             None => {
@@ -137,8 +137,8 @@ impl Commit<Profile> for LogitechSettings {
         let mut raw: serde_json::Value = serde_json::from_str(&decoded).unwrap();
 
         match profiles.iter().find(|profile| profile.id == settings.id) {
-            Some(prof) => {
-                let new_profs = self.update_profile(prof);
+            Some(_) => {
+                let new_profs = self.update_profile(&settings);
                 self.commit(new_profs);
             }
             None => {

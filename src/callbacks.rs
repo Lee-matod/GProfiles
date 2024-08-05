@@ -13,7 +13,7 @@ pub struct Callbacks;
 impl Callbacks {
     pub fn application_clicked(app: AppWindow, application: Game) -> () {
         app.load_keymaps(&application);
-        app.set_active_application(application);
+        app.set_application(application);
     }
 
     pub fn restart_ghub() -> () {
@@ -45,7 +45,7 @@ impl Callbacks {
             settings.commit(application);
             app.load_applications();
             app.load_keymaps(&game);
-            app.set_active_application(game);
+            app.set_application(game);
         }
         settings.close();
     }
@@ -58,21 +58,22 @@ impl Callbacks {
             let game = Game::from_settings(application.clone());
             app.load_applications();
             app.load_keymaps(&game);
-            app.set_active_application(game);
+            app.set_application(game);
         }
         settings.close();
     }
 
     pub fn name_edit(app: AppWindow) -> () {
         let settings = LogitechSettings::new();
-        let mut active = app.get_active_application();
+        let active = app.get_active_application();
         let name = app.get_active_application_name();
-        active.name = name;
-
-        let application = settings.app_from_game(active);
+        let mut application = settings.app_from_game(active);
+        application.name = name.to_string();
+        let game = Game::from_settings(application.clone());
         settings.commit(application);
-        app.load_applications();
         settings.close();
+        app.load_applications();
+        app.set_application(game);
     }
 
     pub fn file_edit(
@@ -89,10 +90,12 @@ impl Callbacks {
         let settings = LogitechSettings::new();
         let mut application = settings.app_from_game(active);
         handler(&mut application, image_path);
+        let game = Game::from_settings(application.clone());
         let applications = settings.update_application(&application);
         settings.commit(applications);
         app.load_applications();
         settings.close();
+        app.set_application(game);
     }
 
     pub fn forget_application(app: AppWindow) -> () {
@@ -109,7 +112,7 @@ impl Callbacks {
         let desktop = Game::desktop();
         app.load_applications();
         app.load_keymaps(&desktop);
-        app.set_active_application(desktop);
+        app.set_application(desktop);
     }
 
     pub fn new_key(app: AppWindow) -> () {
