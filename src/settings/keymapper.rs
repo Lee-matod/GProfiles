@@ -15,6 +15,17 @@ impl LogitechSettings {
         Ok(())
     }
 
+    pub fn set_keybinds(&self, executable: String, keybinds: Vec<Keybind>) -> rusqlite::Result<()> {
+        self.conn
+            .execute("DELETE FROM keymapper WHERE exe=?;", (executable,))?;
+        for key in keybinds {
+            if key.vkey_pointer != 0 && key.vkey_object != 0 {
+                self.add_keybind(&key)?;
+            }
+        }
+        Ok(())
+    }
+
     pub fn get_keybinds(
         &self,
         executable: &String,

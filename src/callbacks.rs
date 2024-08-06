@@ -140,7 +140,14 @@ pub fn set_pointer(app: AppWindow, keybind: Keybind) -> () {
                 let keybind = keybind.update_pointer(u64::from(&key));
                 if keybind.input_object() != KeyboardKey::Escape {
                     let settings = LogitechSettings::new().unwrap();
-                    settings.add_keybind(&keybind).unwrap();
+                    let mut keybinds = Vec::from_iter(app.get_keybinds().iter());
+                    keybinds.push(keybind.clone());
+                    settings
+                        .set_keybinds(
+                            app.get_active_application_executable().to_string(),
+                            keybinds,
+                        )
+                        .unwrap();
                     settings.close();
                 }
                 app.set_keymap(keybind);
@@ -166,7 +173,14 @@ pub fn set_object(app: AppWindow, keybind: Keybind) -> () {
                 let keybind = keybind.update_object(u64::from(&key));
                 if keybind.input_pointer() != KeyboardKey::Escape {
                     let settings = LogitechSettings::new().unwrap();
-                    settings.add_keybind(&keybind).unwrap();
+                    let mut keybinds = Vec::from_iter(app.get_keybinds().iter());
+                    keybinds.push(keybind.clone());
+                    settings
+                        .set_keybinds(
+                            app.get_active_application_executable().to_string(),
+                            keybinds,
+                        )
+                        .unwrap();
                     settings.close();
                 }
                 app.set_keymap(keybind);

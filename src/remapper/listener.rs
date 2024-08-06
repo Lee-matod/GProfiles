@@ -5,13 +5,19 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, DispatchMessageW, GetMessageW, SetWindowsHookExA, TranslateMessage,
-    UnhookWindowsHookEx, KBDLLHOOKSTRUCT, MSG, WH_KEYBOARD_LL, WM_KEYDOWN,
+    UnhookWindowsHookEx, KBDLLHOOKSTRUCT, MSG, WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN,
+    WM_SYSKEYUP,
 };
 
 use super::ACTIVE_KEYMAP;
 
 unsafe extern "system" fn keyboard_hook(n_code: i32, w_param: WPARAM, l_param: LPARAM) -> LRESULT {
-    if n_code >= 0 && w_param.0 as u32 == WM_KEYDOWN {
+    if n_code >= 0
+        && (w_param.0 as u32 == WM_KEYDOWN
+            || w_param.0 as u32 == WM_SYSKEYDOWN
+            || w_param.0 as u32 == WM_KEYUP
+            || w_param.0 as u32 == WM_SYSKEYUP)
+    {
         let kb_hook_struct = *(l_param.0 as *const KBDLLHOOKSTRUCT);
         let keycode = kb_hook_struct.vkCode as u16;
 
@@ -22,7 +28,10 @@ unsafe extern "system" fn keyboard_hook(n_code: i32, w_param: WPARAM, l_param: L
                     Anonymous: std::mem::zeroed(),
                 };
                 input.Anonymous.ki.wVk = VIRTUAL_KEY(new_key.clone());
-                input.Anonymous.ki.dwFlags = KEYBD_EVENT_FLAGS { 0: 0 };
+                input.Anonymous.ki.dwFlags = match w_param.0 as u32 {
+                    WM_KEYDOWN | WM_SYSKEYDOWN => KEYBD_EVENT_FLAGS { 0: 0 },
+                    _ => KEYBD_EVENT_FLAGS { 0: 2 }, // This can only be either WM_KEYUP or WM_SYSKEYDOWN
+                };
                 SendInput(&[input], std::mem::size_of::<INPUT>() as i32);
                 return LRESULT(1);
             }

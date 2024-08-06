@@ -157,7 +157,13 @@ impl AppWindow {
 
                     let processes: slint::VecModel<Process> = slint::VecModel::default();
                     for proc in foreground.iter() {
-                        if apps.iter().any(|p| p.executable == proc.to_string_lossy()) {
+                        if apps.iter().any(|p| {
+                            !p.executable.is_empty()
+                                && proc
+                                    .to_string_lossy()
+                                    .to_string()
+                                    .starts_with(&p.executable.to_string())
+                        }) {
                             continue;
                         }
                         processes.push(Process::from_exec(proc.as_path()));

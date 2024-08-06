@@ -57,10 +57,8 @@ impl LogitechSettings {
     pub fn get_application(&self, executable: &String) -> Option<Application> {
         let apps = self.get_applications();
         if let Some(app) = apps.iter().find(|item| {
-            item.applicationPath
-                .clone()
-                .unwrap_or(String::new())
-                .starts_with(executable)
+            let item_exe = item.applicationPath.clone().unwrap_or(String::new());
+            !item_exe.is_empty() && executable.starts_with(&item_exe)
         }) {
             return Some(app.clone());
         }
