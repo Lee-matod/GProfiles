@@ -30,7 +30,10 @@ pub fn restart_ghub() -> () {
 }
 
 pub fn from_executable(app: AppWindow) -> Option<()> {
-    let executable = app.select_file("Executable", &[""], path::Path::new(""))?;
+    let executable = match app.select_file("Executable", &["exe"], path::Path::new("")) {
+        Some(i) => i,
+        None => return Some(()),
+    };
     let settings = LogitechSettings::new()?;
     if let Some(application) = settings.create_application(path::Path::new(&executable)) {
         let game = Game::from_settings(application.clone());
@@ -76,7 +79,10 @@ pub fn file_edit(
     implementation: impl FnOnce(&AppWindow) -> Option<String> + 'static,
     handler: impl FnOnce(&mut Application, String),
 ) -> Option<()> {
-    let image_path = implementation(&app)?;
+    let image_path = match implementation(&app) {
+        Some(i) => i,
+        None => return Some(()),
+    };
 
     let active = app.get_active_application();
     let settings = LogitechSettings::new()?;
