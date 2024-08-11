@@ -5,6 +5,7 @@ pub const PROFILE_NAME_DEFAULT: &str = "PROFILE_NAME_DEFAULT";
 pub const BROKEN_IMAGE_ICON: &[u8; 5038] =
     include_bytes!("../assets/material_icons/broken_image.png");
 pub const DESKTOP_ICON: &[u8; 3565] = include_bytes!("../assets/material_icons/desktop.png");
+pub const APP_ICON: &[u8; 7032] = include_bytes!("../assets/app.ico");
 
 pub fn logitech_folder() -> path::PathBuf {
     let localappdata = option_env!("LOCALAPPDATA").expect("no %localappdata% directory");

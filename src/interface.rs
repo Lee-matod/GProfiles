@@ -3,14 +3,18 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
+use image;
 use rfd::FileDialog;
 use slint::{ComponentHandle, Model, Weak};
+use tray_icon::menu::{Menu, MenuEvent, MenuItem};
+use tray_icon::{Icon, TrayIconBuilder};
 
 use crate::extract::foreground_apps;
 use crate::remapper;
 use crate::remapper::listener;
 use crate::settings::LogitechSettings;
 use crate::types::Application;
+use crate::utils::APP_ICON;
 use crate::{AppWindow, Game, GameType, Keybind, Process};
 
 impl AppWindow {
@@ -119,18 +123,56 @@ impl AppWindow {
     }
 
     pub fn start(&self) -> () {
+        // Process updating thread
         thread::spawn({
             let weak = self.as_weak();
             move || AppWindow::background_task(weak)
         });
+
+        // Keymapping thread
         thread::spawn(move || unsafe {
             listener::set_hook().unwrap();
+        });
+
+        // Tray icon thread
+        let rgba = image::load_from_memory(APP_ICON).unwrap().to_rgba8();
+        let _tray_icon = TrayIconBuilder::new()
+            .with_menu(Box::new(
+                Menu::with_items(&[
+                    &MenuItem::new("Open", true, None),
+                    &MenuItem::new("Quit", true, None),
+                ])
+                .unwrap(),
+            ))
+            .with_tooltip("GProfiles")
+            .with_icon(Icon::from_rgba(rgba.as_raw().clone(), rgba.width(), rgba.height()).unwrap())
+            .build()
+            .unwrap();
+
+        thread::spawn({
+            let weak = self.as_weak();
+            move || loop {
+                let weak = weak.clone();
+                if let Ok(event) = MenuEvent::receiver().try_recv() {
+                    if event.id.0 == "1000" {
+                        slint::invoke_from_event_loop(move || {
+                            weak.unwrap().window().show().unwrap()
+                        })
+                        .unwrap()
+                    } else {
+                        slint::quit_event_loop().unwrap()
+                    }
+                }
+            }
         });
 
         self.load_applications().unwrap();
         self.load_processes("");
         self.load_keymaps(&Game::desktop()).unwrap();
-        self.run().unwrap();
+
+        self.show().unwrap();
+        slint::run_event_loop_until_quit().unwrap();
+        self.hide().unwrap();
     }
 
     fn background_task(weak: Weak<AppWindow>) -> () {
