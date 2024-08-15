@@ -42,4 +42,15 @@ impl LogitechSettings {
         profiles.insert(idx, profile.clone());
         Some(profiles)
     }
+
+    pub fn remove_profiles(&self, application: &Application) -> Vec<Profile> {
+        let profiles = self.get_profiles_for(application);
+        let mut new_profiles = Vec::new();
+        for profile in profiles {
+            if profile.applicationId != application.applicationId {
+                new_profiles.push(profile);
+            }
+        }
+        new_profiles
+    }
 }

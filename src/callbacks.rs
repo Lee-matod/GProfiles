@@ -104,8 +104,10 @@ pub fn forget_application(app: AppWindow) -> Option<()> {
     }
     let settings = LogitechSettings::new()?;
     let application = settings.app_from_game(active)?;
+    let profiles = settings.remove_profiles(&application);
     let applications = settings.remove_application(application)?;
     settings.commit(applications);
+    settings.commit(profiles);
     settings.close();
 
     let desktop = Game::desktop();
