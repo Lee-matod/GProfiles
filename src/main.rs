@@ -19,6 +19,7 @@ use callbacks::{
     application_clicked, delete_key, file_edit, forget_application, from_executable, from_process,
     name_edit, new_key, restart_ghub, set_object, set_pointer,
 };
+use extract::get_lock;
 use image::Image;
 use utils::safe_canonicalize;
 use uuid::Uuid;
@@ -28,6 +29,12 @@ use crate::settings::LogitechSettings;
 slint::include_modules!();
 
 fn main() -> Result<(), slint::PlatformError> {
+    let mutex = unsafe { get_lock() };
+    if mutex.is_none() {
+        // There is another instance of GProfiles already running
+        return Ok(());
+    }
+
     LogitechSettings::create();
     let ui = AppWindow::new()?;
 
@@ -124,6 +131,6 @@ fn main() -> Result<(), slint::PlatformError> {
         move |keybind| delete_key(weak.unwrap(), keybind).unwrap()
     });
 
-    ui.start();
+    ui.start(mutex.unwrap());
     Ok(())
 }

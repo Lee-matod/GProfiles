@@ -7,25 +7,53 @@ use std::{mem, path, thread};
 
 use image::RgbaImage;
 use windows::core::{Result, PCWSTR};
-use windows::Win32::Foundation::{BOOL, HWND, LPARAM};
+use windows::Win32::Foundation::{
+    CloseHandle, GetLastError, BOOL, ERROR_ALREADY_EXISTS, HANDLE, HWND, LPARAM, WPARAM,
+};
 use windows::Win32::Graphics::Gdi::{
     DeleteObject, GetBitmapBits, GetDC, GetObjectW, ReleaseDC, BITMAP, BITMAPINFOHEADER, HBITMAP,
     HGDIOBJ,
 };
 use windows::Win32::Storage::FileSystem::FILE_FLAGS_AND_ATTRIBUTES;
 use windows::Win32::System::ProcessStatus::GetModuleFileNameExW;
-use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
+use windows::Win32::System::Threading::{
+    CreateMutexExW, OpenProcess, MUTEX_ALL_ACCESS, MUTEX_MODIFY_STATE,
+    PROCESS_QUERY_LIMITED_INFORMATION,
+};
 use windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;
 use windows::Win32::UI::Shell::{SHGetFileInfoW, SHFILEINFOW, SHGFI_FLAGS};
 use windows::Win32::UI::WindowsAndMessaging::{
     DestroyIcon, DispatchMessageW, EnumWindows, GetIconInfo, GetWindowTextW,
-    GetWindowThreadProcessId, IsWindowVisible, PeekMessageW, TranslateMessage, HICON, HWND_MESSAGE,
-    ICONINFO, MSG, PM_REMOVE,
+    GetWindowThreadProcessId, IsWindowVisible, PeekMessageW, PostMessageW, TranslateMessage, HICON,
+    HWND_MESSAGE, ICONINFO, MSG, PM_REMOVE,
 };
 
 use crate::remapper::KeyboardKey;
 
 static mut APPLICATIONS: Vec<(HWND, String)> = Vec::new();
+
+pub unsafe fn get_lock() -> Option<HANDLE> {
+    #[cfg(target_os = "windows")]
+    let mutex_name: Vec<u16> = OsStr::new(GPROFILES)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    #[cfg(target_os = "linux")]
+    let mutex_name: Vec<u16> = vec![];
+
+    let mutex = CreateMutexExW(
+        None,
+        PCWSTR::from_raw(mutex_name.as_ptr()),
+        MUTEX_MODIFY_STATE.0,
+        MUTEX_ALL_ACCESS.0,
+    )
+    .unwrap();
+
+    if GetLastError() == ERROR_ALREADY_EXISTS {
+        return None;
+    }
+    return Some(mutex);
+}
 
 pub unsafe fn key_input(callback: impl FnOnce(Option<KeyboardKey>) + Send + 'static) -> () {
     thread::spawn(move || {
