@@ -1,4 +1,3 @@
-#![allow(unused)]
 use core::mem::MaybeUninit;
 use std::ffi::{OsStr, OsString};
 #[cfg(target_os = "windows")]
@@ -7,9 +6,7 @@ use std::{mem, path, thread};
 
 use image::RgbaImage;
 use windows::core::{Result, PCWSTR};
-use windows::Win32::Foundation::{
-    CloseHandle, GetLastError, BOOL, ERROR_ALREADY_EXISTS, HANDLE, HWND, LPARAM, WPARAM,
-};
+use windows::Win32::Foundation::{GetLastError, BOOL, ERROR_ALREADY_EXISTS, HANDLE, HWND, LPARAM};
 use windows::Win32::Graphics::Gdi::{
     DeleteObject, GetBitmapBits, GetDC, GetObjectW, ReleaseDC, BITMAP, BITMAPINFOHEADER, HBITMAP,
     HGDIOBJ,
@@ -24,8 +21,8 @@ use windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;
 use windows::Win32::UI::Shell::{SHGetFileInfoW, SHFILEINFOW, SHGFI_FLAGS};
 use windows::Win32::UI::WindowsAndMessaging::{
     DestroyIcon, DispatchMessageW, EnumWindows, GetIconInfo, GetWindowTextW,
-    GetWindowThreadProcessId, IsWindowVisible, PeekMessageW, PostMessageW, TranslateMessage, HICON,
-    HWND_MESSAGE, ICONINFO, MSG, PM_REMOVE,
+    GetWindowThreadProcessId, IsWindowVisible, PeekMessageW, TranslateMessage, HICON, HWND_MESSAGE,
+    ICONINFO, MSG, PM_REMOVE,
 };
 
 use crate::remapper::KeyboardKey;
