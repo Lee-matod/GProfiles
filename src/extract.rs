@@ -29,6 +29,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use crate::remapper::KeyboardKey;
+use crate::utils::GPROFILES;
 
 static mut APPLICATIONS: Vec<(HWND, String)> = Vec::new();
 
