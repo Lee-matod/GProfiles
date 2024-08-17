@@ -7,7 +7,8 @@ use image;
 use rfd::FileDialog;
 use slint::{ComponentHandle, Model, Weak};
 use tray_icon::menu::{Menu, MenuEvent, MenuItem};
-use tray_icon::{Icon, TrayIconBuilder};
+use tray_icon::{Icon, MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use windows::Win32::Foundation::{CloseHandle, HANDLE};
 
 use crate::extract::foreground_apps;
 use crate::remapper;
@@ -122,7 +123,7 @@ impl AppWindow {
         Some(())
     }
 
-    pub fn start(&self) -> () {
+    pub fn start(&self, mutex_handle: HANDLE) -> () {
         // Process updating thread
         thread::spawn({
             let weak = self.as_weak();
@@ -152,15 +153,33 @@ impl AppWindow {
         thread::spawn({
             let weak = self.as_weak();
             move || loop {
-                let weak = weak.clone();
                 if let Ok(event) = MenuEvent::receiver().try_recv() {
                     if event.id.0 == "1000" {
-                        slint::invoke_from_event_loop(move || {
-                            weak.unwrap().window().show().unwrap()
-                        })
-                        .unwrap()
+                        let weak = weak.clone();
+                        slint::invoke_from_event_loop(move || weak.unwrap().show().unwrap())
+                            .unwrap()
                     } else {
                         slint::quit_event_loop().unwrap()
+                    }
+                }
+                if let Ok(event) = TrayIconEvent::receiver().try_recv() {
+                    match event {
+                        TrayIconEvent::Click {
+                            id: _,
+                            position: _,
+                            rect: _,
+                            button,
+                            button_state,
+                        } => {
+                            if button == MouseButton::Left && button_state == MouseButtonState::Up {
+                                let weak = weak.clone();
+                                slint::invoke_from_event_loop(move || {
+                                    weak.unwrap().show().unwrap()
+                                })
+                                .unwrap();
+                            }
+                        }
+                        _ => continue,
                     }
                 }
             }
@@ -173,6 +192,7 @@ impl AppWindow {
         self.show().unwrap();
         slint::run_event_loop_until_quit().unwrap();
         self.hide().unwrap();
+        unsafe { CloseHandle(mutex_handle).unwrap() };
     }
 
     fn background_task(weak: Weak<AppWindow>) -> () {
