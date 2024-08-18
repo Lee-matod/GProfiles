@@ -30,7 +30,7 @@ unsafe extern "system" fn keyboard_hook(n_code: i32, w_param: WPARAM, l_param: L
                 input.Anonymous.ki.wVk = VIRTUAL_KEY(new_key.clone());
                 input.Anonymous.ki.dwFlags = match w_param.0 as u32 {
                     WM_KEYDOWN | WM_SYSKEYDOWN => KEYBD_EVENT_FLAGS { 0: 0 },
-                    _ => KEYBD_EVENT_FLAGS { 0: 2 }, // This can only be either WM_KEYUP or WM_SYSKEYDOWN
+                    _ => KEYBD_EVENT_FLAGS { 0: 2 }, // This can only be either WM_KEYUP or WM_SYSKEYUP
                 };
                 SendInput(&[input], std::mem::size_of::<INPUT>() as i32);
                 return LRESULT(1);
