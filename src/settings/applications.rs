@@ -50,7 +50,7 @@ impl LogitechSettings {
     }
 
     pub fn get_applications(&self) -> Vec<Application> {
-        let settings = self.get_settings().unwrap();
+        let settings = self.get_settings();
         settings.applications.applications
     }
 

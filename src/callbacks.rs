@@ -6,6 +6,7 @@ use crate::extract::key_input;
 use crate::remapper::KeyboardKey;
 use crate::settings::{Commit, LogitechSettings};
 use crate::types::Application;
+use crate::utils::MessageBox;
 use crate::{AppWindow, Game, GameType, Keybind, Process};
 
 pub fn application_clicked(app: AppWindow, application: Game) -> () {
@@ -24,17 +25,22 @@ pub fn restart_ghub() -> () {
             }
         }
     }
-    process::Command::new("C:\\Program Files\\LGHUB\\system_tray\\lghub_system_tray.exe")
+    match process::Command::new("C:\\Program Files\\LGHUB\\system_tray\\lghub_system_tray.exe")
         .spawn()
-        .unwrap();
+    {
+        Ok(_) => {}
+        Err(err) => {
+            MessageBox::from_error("Could not start LGHUB.", err.to_string()).warning();
+        }
+    };
 }
 
-pub fn from_executable(app: AppWindow) -> Option<()> {
+pub fn from_executable(app: AppWindow) -> () {
     let executable = match app.select_file("Executable", &["exe"], path::Path::new("")) {
         Some(i) => i,
-        None => return Some(()),
+        None => return, // The file dialog was closed.
     };
-    let settings = LogitechSettings::new()?;
+    let settings = LogitechSettings::new();
     if let Some(application) = settings.create_application(path::Path::new(&executable)) {
         let game = Game::from_settings(application.clone());
         settings.commit(application);
@@ -43,11 +49,10 @@ pub fn from_executable(app: AppWindow) -> Option<()> {
         app.set_application(game);
     }
     settings.close();
-    Some(())
 }
 
-pub fn from_process(app: AppWindow, process: Process) -> Option<()> {
-    let settings = LogitechSettings::new()?;
+pub fn from_process(app: AppWindow, process: Process) -> () {
+    let settings = LogitechSettings::new();
     if let Some(application) =
         settings.create_application(path::Path::new(&process.executable.to_string()))
     {
@@ -57,55 +62,84 @@ pub fn from_process(app: AppWindow, process: Process) -> Option<()> {
         app.set_application(game);
     }
     settings.close();
-    Some(())
 }
 
-pub fn name_edit(app: AppWindow) -> Option<()> {
-    let settings = LogitechSettings::new()?;
+pub fn name_edit(app: AppWindow) -> () {
+    let settings = LogitechSettings::new();
     let active = app.get_active_application();
     let name = app.get_active_application_name();
-    let mut application = settings.app_from_game(active)?;
+    let mut application = match settings.app_from_game(active) {
+        Some(app) => app,
+        None => {
+            MessageBox::new(
+                "Application not found.",
+                "The selected application could not be located.\nMaybe GProfiles and Logitech GHUB are out of sync?"
+            ).error();
+            app.load_applications();
+            return;
+        }
+    };
     application.name = name.to_string();
     let game = Game::from_settings(application.clone());
     settings.commit(application);
     settings.close();
     app.load_applications();
     app.set_application(game);
-    Some(())
 }
 
 pub fn file_edit(
     app: AppWindow,
     implementation: impl FnOnce(&AppWindow) -> Option<String> + 'static,
     handler: impl FnOnce(&mut Application, String),
-) -> Option<()> {
+) -> () {
     let image_path = match implementation(&app) {
         Some(i) => i,
-        None => return Some(()),
+        None => return,
     };
 
     let active = app.get_active_application();
-    let settings = LogitechSettings::new()?;
-    let mut application = settings.app_from_game(active)?;
+    let settings = LogitechSettings::new();
+    let mut application = match settings.app_from_game(active) {
+        Some(app) => app,
+        None => {
+            MessageBox::new(
+                "Application not found.",
+                "The selected application could not be located.\nMaybe GProfiles and Logitech GHUB are out of sync?"
+            ).error();
+            app.load_applications();
+            return;
+        }
+    };
     handler(&mut application, image_path);
     let game = Game::from_settings(application.clone());
-    let applications = settings.update_application(&application)?;
+    // This can be safely unwrapped as we already confirmed that the application existed.
+    let applications = settings.update_application(&application).unwrap();
     settings.commit(applications);
     app.load_applications();
     settings.close();
     app.set_application(game);
-    Some(())
 }
 
-pub fn forget_application(app: AppWindow) -> Option<()> {
+pub fn forget_application(app: AppWindow) -> () {
     let active = app.get_active_application();
     if active.r#type != GameType::Custom {
-        return None;
+        return;
     }
-    let settings = LogitechSettings::new()?;
-    let application = settings.app_from_game(active)?;
+    let settings = LogitechSettings::new();
+    let application = match settings.app_from_game(active) {
+        Some(app) => app,
+        None => {
+            MessageBox::new(
+                "Application not found.",
+                "The selected application could not be located.\nMaybe GProfiles and Logitech GHUB are out of sync?"
+            ).error();
+            app.load_applications();
+            return;
+        }
+    };
     let profiles = settings.remove_profiles(&application);
-    let applications = settings.remove_application(application)?;
+    // This can be safely unwrapped as we already confirmed that the application existed.
+    let applications = settings.remove_application(application).unwrap();
     settings.commit(applications);
     settings.commit(profiles);
     settings.close();
@@ -114,7 +148,6 @@ pub fn forget_application(app: AppWindow) -> Option<()> {
     app.load_applications();
     app.load_keymaps(&desktop);
     app.set_application(desktop);
-    Some(())
 }
 
 pub fn new_key(app: AppWindow) -> () {
@@ -147,15 +180,13 @@ pub fn set_pointer(app: AppWindow, keybind: Keybind) -> () {
                 let key = key.unwrap();
                 let keybind = keybind.update_pointer(u64::from(&key));
                 if keybind.input_object() != KeyboardKey::Escape {
-                    let settings = LogitechSettings::new().unwrap();
+                    let settings = LogitechSettings::new();
                     let mut keybinds = Vec::from_iter(app.get_keybinds().iter());
                     keybinds.push(keybind.clone());
-                    settings
-                        .set_keybinds(
-                            app.get_active_application_executable().to_string(),
-                            keybinds,
-                        )
-                        .unwrap();
+                    settings.set_keybinds(
+                        app.get_active_application_executable().to_string(),
+                        keybinds,
+                    );
                     settings.close();
                 }
                 app.set_keymap(keybind);
@@ -180,15 +211,13 @@ pub fn set_object(app: AppWindow, keybind: Keybind) -> () {
                 let key = key.unwrap();
                 let keybind = keybind.update_object(u64::from(&key));
                 if keybind.input_pointer() != KeyboardKey::Escape {
-                    let settings = LogitechSettings::new().unwrap();
+                    let settings = LogitechSettings::new();
                     let mut keybinds = Vec::from_iter(app.get_keybinds().iter());
                     keybinds.push(keybind.clone());
-                    settings
-                        .set_keybinds(
-                            app.get_active_application_executable().to_string(),
-                            keybinds,
-                        )
-                        .unwrap();
+                    settings.set_keybinds(
+                        app.get_active_application_executable().to_string(),
+                        keybinds,
+                    );
                     settings.close();
                 }
                 app.set_keymap(keybind);
@@ -197,10 +226,9 @@ pub fn set_object(app: AppWindow, keybind: Keybind) -> () {
     }
 }
 
-pub fn delete_key(app: AppWindow, keybind: Keybind) -> Option<()> {
-    let settings = LogitechSettings::new()?;
-    settings.remove_keybind(&keybind).ok()?;
+pub fn delete_key(app: AppWindow, keybind: Keybind) -> () {
+    let settings = LogitechSettings::new();
+    settings.remove_keybind(&keybind);
     settings.close();
     app.load_keymaps(&app.get_active_application());
-    Some(())
 }

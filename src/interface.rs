@@ -15,7 +15,7 @@ use crate::remapper;
 use crate::remapper::listener;
 use crate::settings::LogitechSettings;
 use crate::types::Application;
-use crate::utils::APP_ICON;
+use crate::utils::{MessageBox, APP_ICON};
 use crate::{AppWindow, Game, GameType, Keybind, Process};
 
 impl AppWindow {
@@ -28,19 +28,18 @@ impl AppWindow {
     }
 
     pub fn selected_application(&self) -> Option<Application> {
-        let settings = LogitechSettings::new()?;
+        let settings = LogitechSettings::new();
         let apps: Vec<Application> = settings.get_applications();
-        settings.close()?;
+        settings.close();
 
         let active = self.get_active_application();
         if let Some(app) = apps
             .iter()
             .find(|item| item.applicationId == active.id.to_string())
         {
-            Some(app.clone())
-        } else {
-            None
+            return Some(app.clone());
         }
+        None
     }
 
     pub fn select_file(
@@ -56,15 +55,15 @@ impl AppWindow {
 
         if let Some(item) = executable {
             let path_str = item.to_string_lossy().to_string();
-            Some(path_str)
-        } else {
-            None
+            return Some(path_str);
         }
+        None
     }
 
-    pub fn load_applications(&self) -> Option<()> {
-        let settings = LogitechSettings::new()?;
+    pub fn load_applications(&self) -> () {
+        let settings = LogitechSettings::new();
         let applications = settings.get_applications();
+        settings.close();
         let games: slint::VecModel<Game> = slint::VecModel::default();
         for app in applications.iter() {
             let component = Game::from_settings(app.clone());
@@ -75,8 +74,6 @@ impl AppWindow {
             }
         }
         self.set_applications(slint::ModelRc::new(games));
-        settings.close()?;
-        Some(())
     }
 
     pub fn load_processes(&self, query: &str) -> () {
@@ -84,7 +81,10 @@ impl AppWindow {
         let apps = self.get_applications();
         let processes: slint::VecModel<Process> = slint::VecModel::default();
         for proc in foreground {
-            if apps.iter().any(|p| p.executable == proc.to_string_lossy()) {
+            if apps.iter().any(|p| {
+                proc.to_string_lossy()
+                    .starts_with(&p.executable.to_string())
+            }) {
                 continue;
             }
             processes.push(Process::from_exec(proc.as_path()));
@@ -107,11 +107,10 @@ impl AppWindow {
         self.set_keybinds(slint::ModelRc::new(slint::VecModel::from(current)));
     }
 
-    pub fn load_keymaps(&self, application: &Game) -> Option<()> {
-        let settings = LogitechSettings::new()?;
-        let keybinds = settings
-            .get_keybinds(&application.executable.to_string())
-            .ok()?;
+    pub fn load_keymaps(&self, application: &Game) -> () {
+        let settings = LogitechSettings::new();
+        let keybinds = settings.get_keybinds(&application.executable.to_string());
+        settings.close();
         let rc: slint::VecModel<Keybind> = slint::VecModel::default();
         for key in keybinds {
             if let Ok(key) = key {
@@ -119,8 +118,6 @@ impl AppWindow {
             }
         }
         self.set_keybinds(slint::ModelRc::new(rc));
-        settings.close()?;
-        Some(())
     }
 
     pub fn start(&self, mutex_handle: HANDLE) -> () {
@@ -132,7 +129,13 @@ impl AppWindow {
 
         // Keymapping thread
         thread::spawn(move || unsafe {
-            listener::set_hook().unwrap();
+            match listener::set_hook() {
+                Ok(_) => {}
+                Err(err) => {
+                    MessageBox::from_error("Could not set keybind hook.", err.to_string())
+                        .warning();
+                }
+            }
         });
 
         // Tray icon thread
@@ -185,9 +188,9 @@ impl AppWindow {
             }
         });
 
-        self.load_applications().unwrap();
+        self.load_applications();
         self.load_processes("");
-        self.load_keymaps(&Game::desktop()).unwrap();
+        self.load_keymaps(&Game::desktop());
 
         self.show().unwrap();
         slint::run_event_loop_until_quit().unwrap();
@@ -237,7 +240,7 @@ impl AppWindow {
             .unwrap();
 
             if let Some(top) = foreground.get(0) {
-                remapper::set_keymap(&top.to_string_lossy().to_string()).unwrap();
+                remapper::set_keymap(&top.to_string_lossy().to_string());
             }
 
             thread::sleep(Duration::from_millis(500))

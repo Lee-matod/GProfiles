@@ -9,15 +9,14 @@ pub use keyboard::KeyboardKey;
 
 static mut ACTIVE_KEYMAP: RwLock<Option<HashMap<u16, u16>>> = RwLock::new(None);
 
-pub fn set_keymap(executable: &String) -> Option<()> {
-    let settings = LogitechSettings::new()?;
+pub fn set_keymap(executable: &String) -> () {
+    let settings = LogitechSettings::new();
     let application = match settings.get_application(executable) {
         Some(app) => app,
         None => settings.get_desktop_application(),
     };
-    let keybinds = settings
-        .get_keybinds(&application.applicationPath.unwrap_or(String::new()))
-        .ok()?;
+    let keybinds = settings.get_keybinds(&application.applicationPath.unwrap_or(String::new()));
+    settings.close();
 
     let mut new_keymap: HashMap<u16, u16> = HashMap::new();
     for keybind in keybinds {
@@ -25,8 +24,6 @@ pub fn set_keymap(executable: &String) -> Option<()> {
             new_keymap.insert(key.vkey_pointer as u16, key.vkey_object as u16);
         }
     }
-    settings.close();
 
     unsafe { ACTIVE_KEYMAP = RwLock::new(Some(new_keymap)) };
-    Some(())
 }

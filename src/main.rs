@@ -21,7 +21,7 @@ use callbacks::{
 };
 use extract::get_lock;
 use image::Image;
-use utils::safe_canonicalize;
+use utils::{safe_canonicalize, MessageBox};
 use uuid::Uuid;
 
 use crate::settings::LogitechSettings;
@@ -31,7 +31,10 @@ slint::include_modules!();
 fn main() -> Result<(), slint::PlatformError> {
     let mutex = unsafe { get_lock() };
     if mutex.is_none() {
-        // There is another instance of GProfiles already running
+        MessageBox::new(
+            "Application already running",
+            "GProfiles is already running. Exit the application through the system tray to start a new instance."
+        ).info();
         return Ok(());
     }
 
@@ -47,17 +50,17 @@ fn main() -> Result<(), slint::PlatformError> {
 
     ui.on_from_executable({
         let weak = ui.as_weak();
-        move || from_executable(weak.unwrap()).unwrap_or_default()
+        move || from_executable(weak.unwrap())
     });
 
     ui.on_from_process({
         let weak = ui.as_weak();
-        move |process| from_process(weak.unwrap(), process).unwrap_or_default()
+        move |process| from_process(weak.unwrap(), process)
     });
 
     ui.on_name_edit({
         let weak = ui.as_weak();
-        move || name_edit(weak.unwrap()).unwrap_or_default()
+        move || name_edit(weak.unwrap())
     });
 
     ui.on_image_edit({
@@ -82,7 +85,6 @@ fn main() -> Result<(), slint::PlatformError> {
                     app.posterPath = Some(p);
                 },
             )
-            .unwrap_or_default();
         }
     });
 
@@ -102,13 +104,12 @@ fn main() -> Result<(), slint::PlatformError> {
                     app.applicationPath = Some(p);
                 },
             )
-            .unwrap_or_default()
         }
     });
 
     ui.on_forget_application({
         let weak = ui.as_weak();
-        move || forget_application(weak.unwrap()).unwrap_or_default()
+        move || forget_application(weak.unwrap())
     });
 
     ui.on_new_key({
@@ -128,7 +129,7 @@ fn main() -> Result<(), slint::PlatformError> {
 
     ui.on_delete_key({
         let weak = ui.as_weak();
-        move |keybind| delete_key(weak.unwrap(), keybind).unwrap_or_default()
+        move |keybind| delete_key(weak.unwrap(), keybind)
     });
 
     ui.start(mutex.unwrap());

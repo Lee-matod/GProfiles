@@ -1,5 +1,5 @@
 use core::mem::MaybeUninit;
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsString;
 #[cfg(target_os = "windows")]
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use std::{mem, path, thread};
@@ -30,14 +30,22 @@ use crate::utils::GPROFILES;
 
 static mut APPLICATIONS: Vec<(HWND, String)> = Vec::new();
 
-pub unsafe fn get_lock() -> Option<HANDLE> {
-    #[cfg(target_os = "windows")]
-    let mutex_name: Vec<u16> = OsStr::new(GPROFILES)
+#[cfg(target_os = "windows")]
+pub fn encode_wide(text: &str) -> Vec<u16> {
+    use std::ffi::OsStr;
+
+    OsStr::new(text)
         .encode_wide()
         .chain(std::iter::once(0))
-        .collect();
-    #[cfg(target_os = "linux")]
-    let mutex_name: Vec<u16> = vec![];
+        .collect()
+}
+#[cfg(target_os = "linux")]
+pub fn encode_wide(_: &str) -> Vec<u16> {
+    vec![]
+}
+
+pub unsafe fn get_lock() -> Option<HANDLE> {
+    let mutex_name = encode_wide(GPROFILES);
 
     let mutex = CreateMutexExW(
         None,
@@ -134,14 +142,7 @@ pub unsafe fn get_icon(path: &str) -> Result<RgbaImage> {
         szDisplayName: [0; 260],
         szTypeName: [0; 80],
     };
-
-    #[cfg(target_os = "windows")]
-    let path: Vec<u16> = OsStr::new(path)
-        .encode_wide()
-        .chain(std::iter::once(0))
-        .collect();
-    #[cfg(target_os = "linux")]
-    let path: Vec<u16> = vec![];
+    let path = encode_wide(path);
 
     SHGetFileInfoW(
         PCWSTR(path.as_ptr()),

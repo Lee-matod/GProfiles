@@ -7,6 +7,7 @@ use image::{DynamicImage, ImageFormat, RgbaImage};
 use slint::SharedPixelBuffer;
 
 use crate::extract::get_icon;
+use crate::utils::MessageBox;
 use crate::utils::{logitech_folder, safe_canonicalize, BROKEN_IMAGE_ICON};
 
 pub struct Image {
@@ -19,7 +20,11 @@ impl Image {
         let parent = logitech_folder();
         let icon_cache = parent.join("icon_cache");
         if !icon_cache.exists() {
-            panic!("icon_cache not in LGHUB");
+            MessageBox::new(
+                "icon_cache does not exist.",
+                "%LOCALAPPDATA%\\LGHUB\\icon_cache is not a directory.",
+            );
+            panic!();
         }
         icon_cache
     }

@@ -1,5 +1,5 @@
 use crate::types::{Application, Profile};
-use crate::utils::PROFILE_NAME_DEFAULT;
+use crate::utils::{MessageBox, PROFILE_NAME_DEFAULT};
 
 use super::LogitechSettings;
 
@@ -12,7 +12,7 @@ impl LogitechSettings {
     }
 
     pub fn get_profiles(&self) -> Vec<Profile> {
-        let settings = self.get_settings().unwrap();
+        let settings = self.get_settings();
         settings.profiles.profiles
     }
 
@@ -28,11 +28,17 @@ impl LogitechSettings {
     }
 
     pub fn get_default_profile(&self, profiles: Vec<Profile>) -> Profile {
-        profiles
+        match profiles
             .iter()
             .find(|item| item.name == PROFILE_NAME_DEFAULT)
-            .expect("no default profile")
-            .clone()
+        {
+            Some(profile) => return profile.clone(),
+            None => {
+                MessageBox::new("No default profile.", "Application has no default profile.")
+                    .error();
+                panic!();
+            }
+        }
     }
 
     pub fn update_profile(&self, profile: &Profile) -> Option<Vec<Profile>> {
@@ -44,7 +50,7 @@ impl LogitechSettings {
     }
 
     pub fn remove_profiles(&self, application: &Application) -> Vec<Profile> {
-        let profiles = self.get_profiles_for(application);
+        let profiles = self.get_profiles();
         let mut new_profiles = Vec::new();
         for profile in profiles {
             if profile.applicationId != application.applicationId {
