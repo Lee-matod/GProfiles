@@ -1,4 +1,4 @@
-#![allow(non_snake_case, dead_code)]
+#![allow(non_snake_case)]
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
@@ -279,14 +279,6 @@ impl Profile {
             name: PROFILE_NAME_DEFAULT.to_string(),
             assignments,
         }
-    }
-
-    pub fn update(&mut self, profile: Profile) -> () {
-        self.activeForApplication = profile.activeForApplication;
-        self.applicationId = profile.applicationId;
-        self.id = profile.id;
-        self.name = profile.name;
-        self.assignments = profile.assignments;
     }
 }
 
