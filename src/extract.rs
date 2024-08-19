@@ -85,48 +85,20 @@ pub unsafe fn key_input(callback: impl FnOnce(Option<KeyboardKey>) + Send + 'sta
     });
 }
 
-pub unsafe fn foreground_apps(needle: &str) -> Vec<path::PathBuf> {
+pub unsafe fn foreground_apps() -> Vec<path::PathBuf> {
     let mut foreground: Vec<path::PathBuf> = Vec::new();
-    let mut active_windows: Vec<HWND> = Vec::new();
     APPLICATIONS.clear();
 
     EnumWindows(Some(enum_callback), None).unwrap();
     for (hwnd, title) in APPLICATIONS.clone() {
-        if IsWindowVisible(hwnd).as_bool() && !title.is_empty() {
-            active_windows.push(hwnd);
+        if !IsWindowVisible(hwnd).as_bool() || title.is_empty() {
+            continue;
         }
-    }
-
-    for hwnd in active_windows {
-        let mut process_id = 0;
-        GetWindowThreadProcessId(hwnd, Some(&mut process_id));
-        if process_id == 0 {
-            continue;
-        };
-
-        let process_handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, process_id);
-        if process_handle.is_err() {
-            continue;
-        };
-
-        let mut module_filename = vec![0u16; 1024];
-        let size = GetModuleFileNameExW(process_handle.unwrap(), None, &mut module_filename);
-        if size == 0 {
-            continue;
-        };
-
-        #[cfg(target_os = "windows")]
-        let module_filename = OsString::from_wide(&module_filename[..size as usize]);
-        #[cfg(target_os = "linux")]
-        let module_filename = OsString::new();
-
-        let filepath: String = module_filename.to_string_lossy().to_string();
-        let as_path = path::PathBuf::from(&filepath);
-        let name = match as_path.file_name() {
-            Some(filename) => filename.to_string_lossy().to_string(),
+        let as_path = match hwnd_path(hwnd) {
+            Some(p) => p,
             None => continue,
         };
-        if !name.to_lowercase().contains(needle) || foreground.contains(&as_path) {
+        if foreground.contains(&as_path) {
             continue;
         };
         foreground.push(as_path);
@@ -155,6 +127,33 @@ pub unsafe fn get_icon(path: &str) -> Result<RgbaImage> {
     let image = hicon_to_image(hicon);
     DestroyIcon(hicon)?;
     return image;
+}
+
+pub unsafe fn hwnd_path(hwnd: HWND) -> Option<path::PathBuf> {
+    let mut process_id = 0;
+    GetWindowThreadProcessId(hwnd, Some(&mut process_id));
+    if process_id == 0 {
+        return None;
+    };
+
+    let process_handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, process_id);
+    if process_handle.is_err() {
+        return None;
+    };
+
+    let mut module_filename = vec![0u16; 1024];
+    let size = GetModuleFileNameExW(process_handle.unwrap(), None, &mut module_filename);
+    if size == 0 {
+        return None;
+    };
+
+    #[cfg(target_os = "windows")]
+    let module_filename = OsString::from_wide(&module_filename[..size as usize]);
+    #[cfg(target_os = "linux")]
+    let module_filename = OsString::new();
+
+    let filepath: String = module_filename.to_string_lossy().to_string();
+    Some(path::PathBuf::from(&filepath))
 }
 
 unsafe fn hicon_to_image(icon: HICON) -> Result<RgbaImage> {

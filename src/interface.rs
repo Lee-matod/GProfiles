@@ -1,7 +1,5 @@
-use std::path;
-use std::sync::mpsc;
+use std::path::{self, PathBuf};
 use std::thread;
-use std::time::Duration;
 
 use image;
 use rfd::FileDialog;
@@ -9,8 +7,9 @@ use slint::{ComponentHandle, Model, Weak};
 use tray_icon::menu::{Menu, MenuEvent, MenuItem};
 use tray_icon::{Icon, MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use windows::Win32::Foundation::{CloseHandle, HANDLE};
+use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, UnhookWindowsHookEx};
 
-use crate::extract::foreground_apps;
+use crate::extract::{foreground_apps, hwnd_path};
 use crate::remapper;
 use crate::remapper::listener;
 use crate::settings::LogitechSettings;
@@ -76,22 +75,6 @@ impl AppWindow {
         self.set_applications(slint::ModelRc::new(games));
     }
 
-    pub fn load_processes(&self, query: &str) -> () {
-        let foreground = unsafe { foreground_apps(query) };
-        let apps = self.get_applications();
-        let processes: slint::VecModel<Process> = slint::VecModel::default();
-        for proc in foreground {
-            if apps.iter().any(|p| {
-                proc.to_string_lossy()
-                    .starts_with(&p.executable.to_string())
-            }) {
-                continue;
-            }
-            processes.push(Process::from_exec(proc.as_path()));
-        }
-        self.set_processes(slint::ModelRc::new(processes));
-    }
-
     pub fn set_keymap(&self, keybind: Keybind) -> () {
         let current_model = self.get_keybinds();
         let mut current = Vec::from_iter(current_model.iter());
@@ -121,24 +104,6 @@ impl AppWindow {
     }
 
     pub fn start(&self, mutex_handle: HANDLE) -> () {
-        // Process updating thread
-        thread::spawn({
-            let weak = self.as_weak();
-            move || AppWindow::background_task(weak)
-        });
-
-        // Keymapping thread
-        thread::spawn(move || unsafe {
-            match listener::set_hook() {
-                Ok(_) => {}
-                Err(err) => {
-                    MessageBox::from_error("Could not set keybind hook.", err.to_string())
-                        .warning();
-                }
-            }
-        });
-
-        // Tray icon thread
         let rgba = image::load_from_memory(APP_ICON).unwrap().to_rgba8();
         let _tray_icon = TrayIconBuilder::new()
             .with_menu(Box::new(
@@ -155,41 +120,10 @@ impl AppWindow {
 
         thread::spawn({
             let weak = self.as_weak();
-            move || loop {
-                if let Ok(event) = MenuEvent::receiver().try_recv() {
-                    if event.id.0 == "1000" {
-                        let weak = weak.clone();
-                        slint::invoke_from_event_loop(move || weak.unwrap().show().unwrap())
-                            .unwrap()
-                    } else {
-                        slint::quit_event_loop().unwrap()
-                    }
-                }
-                if let Ok(event) = TrayIconEvent::receiver().try_recv() {
-                    match event {
-                        TrayIconEvent::Click {
-                            id: _,
-                            position: _,
-                            rect: _,
-                            button,
-                            button_state,
-                        } => {
-                            if button == MouseButton::Left && button_state == MouseButtonState::Up {
-                                let weak = weak.clone();
-                                slint::invoke_from_event_loop(move || {
-                                    weak.unwrap().show().unwrap()
-                                })
-                                .unwrap();
-                            }
-                        }
-                        _ => continue,
-                    }
-                }
-            }
+            move || AppWindow::background_loop(weak)
         });
 
         self.load_applications();
-        self.load_processes("");
         self.load_keymaps(&Game::desktop());
 
         self.show().unwrap();
@@ -198,52 +132,108 @@ impl AppWindow {
         unsafe { CloseHandle(mutex_handle).unwrap() };
     }
 
-    fn background_task(weak: Weak<AppWindow>) -> () {
-        loop {
-            let (sender, receiver) = mpsc::channel();
-            slint::invoke_from_event_loop({
-                let weak = weak.clone();
-                move || {
-                    let app = weak.unwrap();
-                    sender.send(app.get_process_query().to_string()).unwrap();
-                }
-            })
-            .unwrap();
-            let query = receiver.recv().unwrap();
+    fn background_loop(weak: Weak<AppWindow>) -> () {
+        // 4 things happen in this one tiny function:
+        //
+        // 1. Keybind hook is set and kept active until the application is quit.
+        // 2. Active foreground window is actively queried, which then updates which keymap layout to use.
+        // 3. Any system tray events are handled.
+        // 4. Running process list is updated.
 
-            let foreground = unsafe { foreground_apps(&query) };
-
-            slint::invoke_from_event_loop({
-                let weak = weak.clone();
-                let foreground = foreground.clone();
-                move || {
-                    let app = weak.unwrap();
-                    let apps = app.get_applications();
-
-                    let processes: slint::VecModel<Process> = slint::VecModel::default();
-                    for proc in foreground.iter() {
-                        if apps.iter().any(|p| {
-                            !p.executable.is_empty()
-                                && proc
-                                    .to_string_lossy()
-                                    .to_string()
-                                    .starts_with(&p.executable.to_string())
-                        }) {
-                            continue;
-                        }
-                        processes.push(Process::from_exec(proc.as_path()));
-                    }
-
-                    app.set_processes(slint::ModelRc::new(processes));
-                }
-            })
-            .unwrap();
-
-            if let Some(top) = foreground.get(0) {
-                remapper::set_keymap(&top.to_string_lossy().to_string());
+        let h_hook = match unsafe { listener::set_hook() } {
+            Ok(hook) => Some(hook),
+            Err(err) => {
+                // We don't return here because this simple thing is not worthy enough to prevent the entire
+                // application from working.
+                MessageBox::from_error("Could not set keybind hook.", err.to_string()).warning();
+                None
             }
+        };
 
-            thread::sleep(Duration::from_millis(500))
+        // While the application is still alive, we should continue this loop
+        while AppWindow::handle_trayicon(weak.clone()) {
+            unsafe {
+                let hwnd = GetForegroundWindow();
+                let active_window = hwnd_path(hwnd);
+                if active_window.is_some() {
+                    remapper::set_keymap(&active_window.unwrap().to_string_lossy().to_string());
+                }
+            }
+            let foreground_apps = unsafe { foreground_apps() };
+
+            let weak = weak.clone();
+            slint::invoke_from_event_loop(move || {
+                // We don't have to waste time in this if the application is not shown anyway.
+                let app = weak.unwrap();
+                if !app.window().is_visible() {
+                    return;
+                }
+
+                // Get foreground applications matching the query.
+                let query = app.get_process_query().to_string();
+                let foreground: Vec<&PathBuf> = foreground_apps
+                    .iter()
+                    .filter(|i| i.file_name().unwrap().to_string_lossy().starts_with(&query))
+                    .collect();
+
+                // Filter processes that have already been added.
+                let apps = app.get_applications();
+                let processes: slint::VecModel<Process> = slint::VecModel::default();
+                for proc in foreground.iter() {
+                    if apps.iter().any(|p| {
+                        !p.executable.is_empty()
+                            && proc
+                                .to_string_lossy()
+                                .starts_with(&p.executable.to_string())
+                    }) {
+                        continue;
+                    }
+                    processes.push(Process::from_exec(proc.as_path()));
+                }
+
+                // Finally, check if there are any changes and push.
+                let current = app.get_processes();
+                if current.row_count() == processes.row_count() {
+                    return;
+                }
+                app.set_processes(slint::ModelRc::new(processes));
+            })
+            .unwrap()
         }
+
+        if h_hook.is_some() {
+            unsafe { UnhookWindowsHookEx(h_hook.unwrap()).unwrap() };
+        }
+    }
+
+    fn handle_trayicon(weak: Weak<AppWindow>) -> bool {
+        if let Ok(event) = MenuEvent::receiver().try_recv() {
+            if event.id.0 == "1000" {
+                let weak = weak.clone();
+                slint::invoke_from_event_loop(move || weak.unwrap().show().unwrap()).unwrap()
+            } else {
+                slint::quit_event_loop().unwrap();
+                return false;
+            }
+        }
+        if let Ok(event) = TrayIconEvent::receiver().try_recv() {
+            match event {
+                TrayIconEvent::Click {
+                    id: _,
+                    position: _,
+                    rect: _,
+                    button,
+                    button_state,
+                } => {
+                    if button == MouseButton::Left && button_state == MouseButtonState::Up {
+                        let weak = weak.clone();
+                        slint::invoke_from_event_loop(move || weak.unwrap().show().unwrap())
+                            .unwrap();
+                    }
+                }
+                _ => {}
+            }
+        }
+        return true;
     }
 }

@@ -4,9 +4,8 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
     SendInput, INPUT, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, VIRTUAL_KEY,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    CallNextHookEx, DispatchMessageW, GetMessageW, SetWindowsHookExA, TranslateMessage,
-    UnhookWindowsHookEx, KBDLLHOOKSTRUCT, MSG, WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN,
-    WM_SYSKEYUP,
+    CallNextHookEx, SetWindowsHookExA, HHOOK, KBDLLHOOKSTRUCT, WH_KEYBOARD_LL, WM_KEYDOWN,
+    WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP,
 };
 
 use super::ACTIVE_KEYMAP;
@@ -40,15 +39,6 @@ unsafe extern "system" fn keyboard_hook(n_code: i32, w_param: WPARAM, l_param: L
     CallNextHookEx(None, n_code, w_param, l_param)
 }
 
-pub unsafe fn set_hook() -> Result<(), Error> {
-    let h_hook = SetWindowsHookExA(WH_KEYBOARD_LL, Some(keyboard_hook), None, 0)?;
-
-    let mut msg = MSG::default();
-    while GetMessageW(&mut msg, None, 0, 0).as_bool() {
-        TranslateMessage(&msg);
-        DispatchMessageW(&msg);
-    }
-
-    UnhookWindowsHookEx(h_hook)?;
-    Ok(())
+pub unsafe fn set_hook() -> Result<HHOOK, Error> {
+    return SetWindowsHookExA(WH_KEYBOARD_LL, Some(keyboard_hook), None, 0);
 }
