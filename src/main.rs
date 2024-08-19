@@ -31,9 +31,8 @@ slint::include_modules!();
 fn main() -> Result<(), slint::PlatformError> {
     let mutex = unsafe { get_lock() };
     if mutex.is_none() {
-        MessageBox::new(
-            "Application already running",
-            "GProfiles is already running. Exit the application through the system tray to start a new instance."
+        MessageBox::from(
+            "Application is already running. Exit the application through the system tray to start a new instance."
         ).info();
         return Ok(());
     }

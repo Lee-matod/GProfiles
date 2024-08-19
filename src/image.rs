@@ -20,10 +20,7 @@ impl Image {
         let parent = logitech_folder();
         let icon_cache = parent.join("icon_cache");
         if !icon_cache.exists() {
-            MessageBox::new(
-                "icon_cache does not exist.",
-                "%LOCALAPPDATA%\\LGHUB\\icon_cache is not a directory.",
-            );
+            MessageBox::from("%LOCALAPPDATA%\\LGHUB\\icon_cache is not a directory.").error();
             panic!();
         }
         icon_cache

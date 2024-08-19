@@ -145,7 +145,8 @@ impl AppWindow {
             Err(err) => {
                 // We don't return here because this simple thing is not worthy enough to prevent the entire
                 // application from working.
-                MessageBox::from_error("Could not set keybind hook.", err.to_string()).warning();
+                MessageBox::from(format!("Could not set keybind hook.\n{}", err.to_string()))
+                    .warning();
                 None
             }
         };

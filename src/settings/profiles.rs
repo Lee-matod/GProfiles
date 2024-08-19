@@ -34,7 +34,7 @@ impl LogitechSettings {
         {
             Some(profile) => return profile.clone(),
             None => {
-                MessageBox::new("No default profile.", "Application has no default profile.")
+                MessageBox::from("Application has no default profile or it could not be located.")
                     .error();
                 panic!();
             }

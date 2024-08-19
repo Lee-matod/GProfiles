@@ -30,7 +30,7 @@ pub fn restart_ghub() -> () {
     {
         Ok(_) => {}
         Err(err) => {
-            MessageBox::from_error("Could not start LGHUB.", err.to_string()).warning();
+            MessageBox::from(format!("Could not start LGHUB.\n{}", err.to_string())).warning();
         }
     };
 }
@@ -71,8 +71,7 @@ pub fn name_edit(app: AppWindow) -> () {
     let mut application = match settings.app_from_game(active) {
         Some(app) => app,
         None => {
-            MessageBox::new(
-                "Application not found.",
+            MessageBox::from(
                 "The selected application could not be located.\nMaybe GProfiles and Logitech GHUB are out of sync?"
             ).error();
             app.load_applications();
@@ -102,8 +101,7 @@ pub fn file_edit(
     let mut application = match settings.app_from_game(active) {
         Some(app) => app,
         None => {
-            MessageBox::new(
-                "Application not found.",
+            MessageBox::from(
                 "The selected application could not be located.\nMaybe GProfiles and Logitech GHUB are out of sync?"
             ).error();
             app.load_applications();
@@ -129,8 +127,7 @@ pub fn forget_application(app: AppWindow) -> () {
     let application = match settings.app_from_game(active) {
         Some(app) => app,
         None => {
-            MessageBox::new(
-                "Application not found.",
+            MessageBox::from(
                 "The selected application could not be located.\nMaybe GProfiles and Logitech GHUB are out of sync?"
             ).error();
             app.load_applications();

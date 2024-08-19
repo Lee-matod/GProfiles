@@ -3,7 +3,7 @@ use std::path;
 use rusqlite::Connection;
 
 use crate::types::{Application, InnerApplications, InnerProfiles, JsonData, Profile};
-use crate::utils::{handle_err, logitech_folder, MessageBox};
+use crate::utils::{logitech_folder, MessageBox};
 
 mod applications;
 mod keymapper;
@@ -45,11 +45,7 @@ impl LogitechSettings {
         let ghub = logitech_folder();
         let settings = ghub.join("settings.db");
         if !settings.exists() {
-            MessageBox::new(
-                "settings.db does not exist.",
-                "%LOCALAPPDATA%\\LGHUB\\settings.db not found.",
-            )
-            .error();
+            MessageBox::from("%LOCALAPPDATA%\\LGHUB\\settings.db not found.").error();
             panic!();
         }
         settings
@@ -60,7 +56,7 @@ impl LogitechSettings {
         match serde_json::from_str(&decoded) {
             Ok(data) => data,
             Err(err) => {
-                MessageBox::from_error("Could not decode JSON.", err.to_string()).error();
+                MessageBox::from(format!("Could not decode JSON:\n{}", err.to_string())).error();
                 panic!();
             }
         }
@@ -82,7 +78,10 @@ impl Commit<Vec<Application>> for LogitechSettings {
         let decoded = self.get_raw_settings();
         let mut raw: serde_json::Value = match serde_json::from_str(&decoded) {
             Ok(data) => data,
-            Err(err) => return handle_err("Could not decode JSON.", Box::new(err)),
+            Err(err) => {
+                MessageBox::from(format!("Could not decode JSON:\n{}", err.to_string())).error();
+                panic!()
+            }
         };
         raw["applications"]["applications"] = InnerApplications {
             applications: settings,
@@ -102,7 +101,10 @@ impl Commit<Vec<Profile>> for LogitechSettings {
         let decoded = self.get_raw_settings();
         let mut raw: serde_json::Value = match serde_json::from_str(&decoded) {
             Ok(data) => data,
-            Err(err) => return handle_err("Could not decode JSON.", Box::new(err)),
+            Err(err) => {
+                MessageBox::from(format!("Could not decode JSON:\n{}", err.to_string())).error();
+                panic!()
+            }
         };
         raw["profiles"]["profiles"] = InnerProfiles { profiles: settings }.into();
         self.conn
@@ -121,7 +123,10 @@ impl Commit<Application> for LogitechSettings {
         let decoded = self.get_raw_settings();
         let mut raw: serde_json::Value = match serde_json::from_str(&decoded) {
             Ok(data) => data,
-            Err(err) => return handle_err("Could not decode JSON.", Box::new(err)),
+            Err(err) => {
+                MessageBox::from(format!("Could not decode JSON:\n{}", err.to_string())).error();
+                panic!()
+            }
         };
 
         match applications
@@ -155,7 +160,10 @@ impl Commit<Profile> for LogitechSettings {
         let decoded = self.get_raw_settings();
         let mut raw: serde_json::Value = match serde_json::from_str(&decoded) {
             Ok(data) => data,
-            Err(err) => return handle_err("Could not decode JSON.", Box::new(err)),
+            Err(err) => {
+                MessageBox::from(format!("Could not decode JSON:\n{}", err.to_string())).error();
+                panic!()
+            }
         };
 
         match profiles.iter().find(|profile| profile.id == settings.id) {

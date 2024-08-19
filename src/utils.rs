@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::path;
 
 use windows::core::PCWSTR;
@@ -21,8 +20,7 @@ pub fn logitech_folder() -> path::PathBuf {
     let localappdata = match option_env!("LOCALAPPDATA") {
         Some(path) => path,
         None => {
-            MessageBox::new(
-                "LOCALAPPDATA does not exist.",
+            MessageBox::from(
                 "No LOCALAPPDATA environment variable found. Most likely it simply does not exist.",
             )
             .error();
@@ -33,11 +31,7 @@ pub fn logitech_folder() -> path::PathBuf {
     let appdata_path = path::Path::new(localappdata);
     let ghub_folder = appdata_path.join("LGHUB");
     if !ghub_folder.exists() {
-        MessageBox::new(
-            "LGHUB folder does not exist.",
-            "%LOCALAPPDATA%\\LGHUB is not a directory.",
-        )
-        .error();
+        MessageBox::from("%LOCALAPPDATA%\\LGHUB is not a directory.").error();
         panic!();
     }
     ghub_folder
@@ -53,10 +47,6 @@ pub fn safe_canonicalize(path: &path::Path) -> String {
         Some(stripped) => stripped.to_string(),
         None => full_path,
     }
-}
-
-pub fn handle_err(text: &'static str, error: Box<dyn Error>) -> () {
-    MessageBox::from_error(text, error.to_string()).error();
 }
 
 pub enum MessageBoxResult {
@@ -90,22 +80,10 @@ impl From<i32> for MessageBoxResult {
 }
 
 pub struct MessageBox {
-    text: &'static str,
-    caption: String,
+    text: String,
 }
 
 impl MessageBox {
-    pub fn new(text: &'static str, caption: &'static str) -> MessageBox {
-        MessageBox {
-            text,
-            caption: caption.to_string(),
-        }
-    }
-
-    pub fn from_error(text: &'static str, caption: String) -> MessageBox {
-        MessageBox { text, caption }
-    }
-
     pub fn info(&self) -> MessageBoxResult {
         MessageBoxResult::from(self.display(MB_OK | MB_ICONINFORMATION))
     }
@@ -122,11 +100,25 @@ impl MessageBox {
         unsafe {
             MessageBoxW(
                 None,
-                PCWSTR::from_raw(encode_wide(&self.caption).as_ptr()),
                 PCWSTR::from_raw(encode_wide(&self.text).as_ptr()),
+                PCWSTR::from_raw(encode_wide("GProfiles").as_ptr()),
                 utype,
             )
             .0
+        }
+    }
+}
+
+impl From<String> for MessageBox {
+    fn from(value: String) -> Self {
+        MessageBox { text: value }
+    }
+}
+
+impl From<&'static str> for MessageBox {
+    fn from(value: &'static str) -> Self {
+        MessageBox {
+            text: value.to_string(),
         }
     }
 }
