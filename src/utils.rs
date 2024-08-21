@@ -1,4 +1,4 @@
-use std::path;
+use std::{env, path};
 
 use windows::core::PCWSTR;
 
@@ -17,7 +17,7 @@ pub const DESKTOP_ICON: &[u8; 3565] = include_bytes!("../assets/material_icons/d
 pub const APP_ICON: &[u8; 7032] = include_bytes!("../assets/app.ico");
 
 pub fn logitech_folder() -> path::PathBuf {
-    let localappdata = match option_env!("LOCALAPPDATA") {
+    let localappdata = match env::var_os("LOCALAPPDATA") {
         Some(path) => path,
         None => {
             MessageBox::from(
@@ -28,7 +28,7 @@ pub fn logitech_folder() -> path::PathBuf {
         }
     };
 
-    let appdata_path = path::Path::new(localappdata);
+    let appdata_path = path::Path::new(&localappdata);
     let ghub_folder = appdata_path.join("LGHUB");
     if !ghub_folder.exists() {
         MessageBox::from("%LOCALAPPDATA%\\LGHUB is not a directory.").error();
