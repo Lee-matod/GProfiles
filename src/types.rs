@@ -263,7 +263,8 @@ impl Into<Value> for Command {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Profile {
-    pub activeForApplication: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub activeForApplication: Option<bool>,
     pub applicationId: String,
     pub id: String,
     pub name: String,
@@ -273,7 +274,7 @@ pub struct Profile {
 impl Profile {
     pub fn default(id: &String, assignments: Vec<Assignment>) -> Profile {
         Profile {
-            activeForApplication: true,
+            activeForApplication: Some(true),
             applicationId: id.clone(),
             id: id.clone(),
             name: PROFILE_NAME_DEFAULT.to_string(),
@@ -302,13 +303,16 @@ impl PartialEq for Profile {
 
 impl Into<Value> for Profile {
     fn into(self) -> Value {
-        json!({
-            "activeForApplication": self.activeForApplication,
+        let mut data = json!({
             "applicationId": self.applicationId,
             "id": self.id,
             "name": self.name,
             "assignments": self.assignments,
-        })
+        });
+        if self.activeForApplication.is_some() {
+            data["activeForApplication"] = true.into();
+        }
+        data
     }
 }
 
