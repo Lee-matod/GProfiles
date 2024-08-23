@@ -1,4 +1,4 @@
-# <img src="https://github.com/Lee-matod/GProfiles/blob/main/assets/app.ico?raw=true" width=24 height=24> GProfiles
+# <img src="https://github.com/Lee-matod/GProfiles/blob/main/assets/app.ico?raw=true" width=32 height=32> GProfiles
 
 An objectively better way to manage your Logitech GHUB gaming profiles.
 
