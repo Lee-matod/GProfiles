@@ -1,9 +1,8 @@
-use std::path::{self, PathBuf};
-use std::thread;
+use std::{path, thread};
 
 use image;
 use rfd::FileDialog;
-use slint::{ComponentHandle, Model, Weak};
+use slint::{ComponentHandle, Model, ModelRc, VecModel, Weak};
 use tray_icon::menu::{Menu, MenuEvent, MenuItem};
 use tray_icon::{Icon, MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use windows::Win32::Foundation::{CloseHandle, HANDLE};
@@ -18,7 +17,40 @@ use crate::utils::{MessageBox, APP_ICON};
 use crate::{AppWindow, Game, GameType, Keybind, Process};
 
 impl AppWindow {
-    pub fn set_application(&self, game: Game) -> () {
+    pub fn to_thread(
+        &self,
+        ctx: impl FnOnce(Weak<AppWindow>, &LogitechSettings) + Send + 'static,
+    ) -> () {
+        thread::spawn({
+            let weak = self.as_weak();
+            move || {
+                let settings = LogitechSettings::new();
+                ctx(weak, &settings);
+                settings.close();
+            }
+        });
+    }
+
+    pub fn select_file(
+        &self,
+        extension_name: &str,
+        extensions: &[&str],
+        directory: &path::Path,
+    ) -> Option<String> {
+        let executable = FileDialog::new()
+            .add_filter(extension_name, extensions)
+            .set_directory(directory)
+            .pick_file();
+
+        if let Some(item) = executable {
+            let path_str = item.to_string_lossy().to_string();
+            return Some(path_str);
+        }
+        None
+    }
+
+    pub fn set_active(&self, game: Game) -> () {
+        self.load_keymaps(&game);
         self.set_active_application(game.clone());
         self.set_active_application_name(game.name);
         self.set_active_application_image(game.image_path);
@@ -41,38 +73,24 @@ impl AppWindow {
         None
     }
 
-    pub fn select_file(
-        &self,
-        extension_name: &str,
-        extensions: &[&str],
-        directory: &path::Path,
-    ) -> Option<String> {
-        let executable = FileDialog::new()
-            .add_filter(extension_name, extensions)
-            .set_directory(directory)
-            .pick_file();
-
-        if let Some(item) = executable {
-            let path_str = item.to_string_lossy().to_string();
-            return Some(path_str);
-        }
-        None
-    }
-
     pub fn load_applications(&self) -> () {
-        let settings = LogitechSettings::new();
-        let applications = settings.get_applications();
-        settings.close();
-        let games: slint::VecModel<Game> = slint::VecModel::default();
-        for app in applications.iter() {
-            let component = Game::from_settings(app.clone());
-            if component.r#type == GameType::Desktop {
-                games.insert(0, component);
-            } else {
-                games.push(component);
+        self.to_thread(move |weak, settings| {
+            let applications = settings.get_applications();
+            let mut games: Vec<Game> = Vec::new();
+            for app in applications.iter() {
+                let component = Game::from_settings(app.clone());
+                if component.r#type == GameType::Desktop {
+                    games.insert(0, component);
+                } else {
+                    games.push(component);
+                }
             }
-        }
-        self.set_applications(slint::ModelRc::new(games));
+            slint::invoke_from_event_loop(move || {
+                let app = weak.unwrap();
+                app.set_applications(ModelRc::new(VecModel::from(games)));
+            })
+            .unwrap();
+        });
     }
 
     pub fn set_keymap(&self, keybind: Keybind) -> () {
@@ -91,16 +109,21 @@ impl AppWindow {
     }
 
     pub fn load_keymaps(&self, application: &Game) -> () {
-        let settings = LogitechSettings::new();
-        let keybinds = settings.get_keybinds(&application.executable.to_string());
-        settings.close();
-        let rc: slint::VecModel<Keybind> = slint::VecModel::default();
-        for key in keybinds {
-            if let Ok(key) = key {
-                rc.push(key)
+        let executable = application.executable.to_string();
+        self.to_thread(move |weak, settings| {
+            let keybinds = settings.get_keybinds(&executable);
+            let mut new_binds: Vec<Keybind> = Vec::new();
+            for key in keybinds {
+                if let Ok(key) = key {
+                    new_binds.push(key);
+                }
             }
-        }
-        self.set_keybinds(slint::ModelRc::new(rc));
+            slint::invoke_from_event_loop(move || {
+                weak.unwrap()
+                    .set_keybinds(ModelRc::new(VecModel::from(new_binds)))
+            })
+            .unwrap();
+        });
     }
 
     pub fn start(&self, mutex_handle: HANDLE) -> () {
@@ -151,7 +174,7 @@ impl AppWindow {
             }
         };
 
-        // While the application is still alive, we should continue this loop
+        // While the application is still alive, we should continue this loop.
         while AppWindow::handle_trayicon(weak.clone()) {
             unsafe {
                 let hwnd = GetForegroundWindow();
@@ -172,7 +195,7 @@ impl AppWindow {
 
                 // Get foreground applications matching the query.
                 let query = app.get_process_query().to_string();
-                let foreground: Vec<&PathBuf> = foreground_apps
+                let foreground: Vec<&path::PathBuf> = foreground_apps
                     .iter()
                     .filter(|i| i.file_name().unwrap().to_string_lossy().starts_with(&query))
                     .collect();

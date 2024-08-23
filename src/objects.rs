@@ -1,6 +1,7 @@
 use std::path;
 
 use slint::SharedString;
+use uuid::Uuid;
 
 use crate::image::Image;
 use crate::remapper::KeyboardKey;
@@ -161,4 +162,23 @@ impl Game {
             r#type: GameType::Custom,
         }
     }
+
+    pub fn from_exec(executable: &path::Path) -> Game {
+        let mut image = Image::from(executable);
+        let image_path = image.save();
+
+        Game::custom(
+            Uuid::new_v4().to_string().replace("-", ""),
+            executable
+                .file_stem()
+                .unwrap()
+                .to_string_lossy()
+                .to_string(),
+            image_path.to_string_lossy().to_string(),
+            executable.to_string_lossy().to_string(),
+            image,
+        )
+    }
 }
+
+unsafe impl Send for Game {}
