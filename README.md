@@ -1,4 +1,4 @@
-# GProfiles
+# <img src="https://github.com/Lee-matod/GProfiles/blob/main/assets/app.ico?raw=true" width=24 height=24> GProfiles
 
 An objectively better way to manage your Logitech GHUB gaming profiles.
 
@@ -50,6 +50,12 @@ You can also move or create a shortcut to the `GProfiles.exe` executable file cr
 - Built-in LGHUB restart button to apply changes.
 - Native executable icon transparency.
 - Per-application keyboard key remapping.
+
+![Desktop screenshot](https://github.com/Lee-matod/GProfiles/blob/main/.github/assets/gprofiles-desktop.png?raw=true)
+
+![Installed Profile screenshot](https://github.com/Lee-matod/GProfiles/blob/main/.github/assets/gprofiles-installed.png?raw=true)
+
+![Custom Profile screenshot](https://github.com/Lee-matod/GProfiles/blob/main/.github/assets/gprofiles-custom.png?raw=true)
 
 # FAQ
 
