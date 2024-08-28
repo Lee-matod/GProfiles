@@ -4,13 +4,6 @@ use crate::utils::{MessageBox, PROFILE_NAME_DEFAULT};
 use super::LogitechSettings;
 
 impl LogitechSettings {
-    pub fn new_default_profile(&self, application: &Application) -> Profile {
-        let desktop = self.get_desktop_application();
-        let desktop_profiles = self.get_profiles_for(&desktop);
-        let desktop_default = self.get_default_profile(desktop_profiles);
-        Profile::default(&application.applicationId, desktop_default.assignments)
-    }
-
     pub fn get_profiles(&self) -> Vec<Profile> {
         let settings = self.get_settings();
         settings.profiles.profiles

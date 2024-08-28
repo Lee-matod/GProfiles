@@ -3,7 +3,7 @@ use std::path;
 use uuid::Uuid;
 
 use crate::image::Image;
-use crate::types::Application;
+use crate::types::{Application, Profile};
 use crate::utils::{safe_canonicalize, APPLICATION_NAME_DESKTOP};
 use crate::Game;
 
@@ -24,7 +24,7 @@ impl LogitechSettings {
         let profiles = self.get_profiles_for(&application);
         if profiles.is_empty() {
             // If this is empty, it means that we don't already have an existing application.
-            let default = self.new_default_profile(&application);
+            let default = Profile::default(&application.applicationId);
             self.commit(application.clone());
             self.commit(default);
             return Some(application);

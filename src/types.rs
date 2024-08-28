@@ -272,13 +272,13 @@ pub struct Profile {
 }
 
 impl Profile {
-    pub fn default(id: &String, assignments: Vec<Assignment>) -> Profile {
+    pub fn default(id: &String) -> Profile {
         Profile {
             activeForApplication: Some(true),
             applicationId: id.clone(),
             id: id.clone(),
             name: PROFILE_NAME_DEFAULT.to_string(),
-            assignments,
+            assignments: Vec::new(),
         }
     }
 }
