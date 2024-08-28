@@ -3,6 +3,7 @@ use std::{path, process};
 use sysinfo::{ProcessRefreshKind, RefreshKind, System};
 
 use crate::extract::key_input;
+use crate::image::Image;
 use crate::remapper::KeyboardKey;
 use crate::settings::{Commit, LogitechSettings};
 use crate::types::Application;
@@ -71,6 +72,7 @@ pub fn forget_application(app: AppWindow) -> () {
     if active.r#type != GameType::Custom {
         return;
     }
+    let image = Image::from(path::Path::new(&active.image_path.to_string()));
     let settings = LogitechSettings::new();
     let application = match settings.app_from_game(active) {
         Some(app) => app,
@@ -85,6 +87,7 @@ pub fn forget_application(app: AppWindow) -> () {
     let profiles = settings.remove_profiles(&application);
     // This can be safely unwrapped as we already confirmed that the application existed.
     let applications = settings.remove_application(application).unwrap();
+    image.delete();
     settings.commit(applications);
     settings.commit(profiles);
     settings.close();
