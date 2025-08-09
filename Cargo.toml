@@ -1,6 +1,6 @@
 [package]
 name = "gprofiles"
-version = "0.2.3"
+version = "1.0.0-alpha.1"
 authors = ["Lee-matod <lee.underscore.matod@gmail.com>"]
 edition = "2021"
 build = "build.rs"
@@ -8,19 +8,10 @@ build = "build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-image = "0.24.9"
-rfd = "0.14.0"
-rusqlite = { version = "0.31.0", features = ["serde_json", "bundled"] }
-serde = { version = "1.0.197", features = ["derive"] }
-serde_json = "1.0.114"
-slint = "1.4"
-sysinfo = "0.30.7"
-tray-icon = "0.14.3"
-uuid = { version = "1.7.0", features = ["v4", "fast-rng"] }
-windows = { version = "0.54.0", features = ["Win32", "Win32_Graphics", "Win32_Graphics_Gdi", "Win32_Security", "Win32_UI", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_Storage_FileSystem", "Win32_System_Threading", "Win32_System_ProcessStatus"] }
+slint = "1.12.1"
 
 [build-dependencies]
-slint-build = "1.4"
+slint-build = "1.12.1"
 winres = "0.1.12"
 
 [[bin]]

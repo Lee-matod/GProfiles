@@ -1,44 +1,15 @@
-import "../assets/fonts/ArchivoBlack/ArchivoBlack-Regular.ttf";
-import "../assets/fonts/Roboto/Roboto-Regular.ttf";
+import { Color, Dimensions } from "objects.slint";
+import { ProcessContainer } from "processes.slint";
+import { Title } from "components.slint";
+import { ApplicationCard, ApplicationContainer } from "applications.slint";
+import { ApplicationEditor } from "editor.slint";
 
-import { Title, EditableField, FieldContentType, PrettyButton } from "text.slint";
-import { SlintAttribution } from "components.slint";
-import { Game, GameType, GameView, GameContainer } from "objects/games.slint";
-import { Process, ProcessContainer } from "objects/processes.slint";
-import { Keybind, Remapper } from "objects/keymapper.slint";
-
-export component AppWindow inherits Window {
-    callback application-clicked(Game);
-    callback restart-ghub();
-
-    callback from-executable();
-    callback from-process(Process);
-
-    callback name-edit();
-    callback image-edit();
-    callback executable-edit();
-    callback forget-application();
-
-    callback new-key();
-    callback set-pointer(Keybind);
-    callback set-object(Keybind);
-    callback delete-key(Keybind);
-
-    in-out property <[Keybind]> keybinds;
-    in-out property <[Process]> processes;
-    in-out property <[Game]> applications;
-    in-out property <Game> active-application: applications[0];
-    in-out property <string> active-application-name: "Desktop";
-    in-out property <string> active-application-image: "";
-    in-out property <string> active-application-executable: "";
-    in-out property <GameType> active-application-type: GameType.desktop;
-    out property <string> process-query;
-
-    width: 960px;
-    height: 540px;
+export component App inherits Window {
     title: "GProfiles";
     icon: @image-url("../assets/app.ico");
-    background: #000000;
+    min-width: 960px;
+    min-height: 540px;
+    background: Color.background;
 
     scope := FocusScope { }
 
@@ -48,159 +19,48 @@ export component AppWindow inherits Window {
         }
     }
 
-    Title {
-        x: 50px;
-        y: 20px;
-        text: "ADD APPLICATION";
+    new-card := ApplicationCard {
+        x: Dimensions.huge * 3;
+        y: Dimensions.huge * 3;
+        application: {
+            name: "NEW",
+            icon: @image-url("../assets/add.png"),
+        };
     }
 
-    Title {
-        x: 500px;
-        y: 20px;
+    profiles := Title {
+        x: new-card.width + new-card.x * 2;
+        y: Dimensions.huge;
+        width: root.width - self.x - Dimensions.huge;
         text: "GAME PROFILES";
     }
 
-    Title {
-        x: 15px;
-        y: 275px;
-        text: "DETECTED APPLICATIONS";
-    }
-
-    ProcessContainer {
-        x: -360px;
-        y: 300px;
-        processes: processes;
-        query <=> process-query;
-        add-process(process) => {
-            root.from-process(process)
-        }
-    }
-
-    GameView {
-        y: 50px;
-        x: 50px;
-
-        application: { name: "NEW", icon: @image-url("../assets/material_icons/add.png") };
-        active: active-application;
-        image-override: #ffffff;
-
-        TouchArea {
-            clicked => {
-                root.from-executable();
-            }
-        }
-    }
-
-    GameContainer {
-        x: 250px;
-        y: 50px;
-        active-application: active-application;
-        applications: applications;
-        clicked(application) => {
-            root.application-clicked(application);
-        }
+    application-container := ApplicationContainer {
+        x: profiles.x - Dimensions.large;
+        y: profiles.y + profiles.height + Dimensions.medium;
+        width: profiles.width + Dimensions.huge;
+        height: 200px;
     }
 
     Rectangle {
-        x: 240px;
-        y: 280px;
-        width: 710px;
-        height: 250px;
+        x: application-container.width + application-container.x - self.width + Dimensions.small;
+        y: application-container.y;
+        width: Dimensions.huge * 6;
+        height: application-container.height;
+        background: @linear-gradient(-90deg, #000000, #00000000);
+    }
 
-        background: #3b3b3b;
-        border-radius: 5px;
+    processes := ProcessContainer {
+        x: Dimensions.medium;
+        y: root.min-height / 2;
+        width: root.min-width / 4;
+        height: root.height - root.min-height / 2 - Dimensions.medium;
+    }
 
-        // Slint's Royalty-free license requires me
-        // to include this somewhere that can be seen.
-        SlintAttribution {
-            x: -75px;
-            y: 70px;
-        }
-
-        PrettyButton {
-            x: 20px;
-            y: 205px;
-            text: "FORGET";
-            icon: @image-url("../assets/material_icons/delete.png");
-            hover: #ff2e2e;
-            default: #e00d00;
-            clicked => {
-                root.forget-application();
-            }
-        }
-
-        PrettyButton {
-            x: 500px;
-            y: 205px;
-            width: 190px;
-            text: "RESTART LGHUB";
-            icon: @image-url("../assets/material_icons/refresh.png");
-            hover: #999999;
-            default: #666666;
-            clicked => {
-                root.restart-ghub();
-            }
-        }
-
-        EditableField {
-            x: 20px;
-            y: 25px;
-            title: "PROFILE NAME";
-            content <=> active-application-name;
-            content-type: active-application.type == GameType.desktop || active-application.type == GameType.installed ? FieldContentType.interactable : FieldContentType.editable;
-            icon: active-application.type == GameType.custom ? @image-url("../assets/material_icons/save.png") : @image-url("");
-            clicked => {
-                root.name-edit();
-            }
-        }
-
-        EditableField {
-            x: 20px;
-            y: 85px;
-            title: "IMAGE PATH";
-            content: active-application-image;
-            content-type: active-application.type == GameType.custom ? FieldContentType.interactable : FieldContentType.viewable;
-            icon: active-application.type == GameType.custom ? @image-url("../assets/material_icons/edit.png") : @image-url("");
-            clicked => {
-                root.image-edit();
-            }
-        }
-
-        EditableField {
-            x: 20px;
-            y: 145px;
-            title: "EXECUTABLE PATH";
-            content: active-application-executable;
-            content-type: active-application.type == GameType.desktop ? FieldContentType.viewable : FieldContentType.interactable;
-            icon: active-application.type == GameType.custom ? @image-url("../assets/material_icons/edit.png") : @image-url("");
-            clicked => {
-                root.executable-edit();
-            }
-        }
-
-        Title {
-            x: 440px;
-            y: 25px;
-            text: "KEY REMAPPER";
-        }
-
-        Remapper {
-            x: 435px;
-            y: 45px;
-            keybinds: keybinds;
-
-            new-key() => {
-                root.new-key();
-            }
-            set-pointer(keybind) => {
-                root.set-pointer(keybind);
-            }
-            set-object(keybind) => {
-                root.set-object(keybind);
-            }
-            delete-key(keybind) => {
-                root.delete-key(keybind);
-            }
-        }
+    ApplicationEditor {
+        x: processes.x + processes.width;
+        y: processes.y;
+        width: root.width - self.x - Dimensions.huge;
+        height: root.height - self.y - Dimensions.huge;
     }
 }

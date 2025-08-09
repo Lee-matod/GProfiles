@@ -1,0 +1,97 @@
+export enum ApplicationType { custom, installed, desktop }
+
+export struct Application {
+    id: string,
+    name: string,
+    icon: image,
+    image-path: string,
+    executable: string,
+    type: ApplicationType,
+}
+
+export struct Process {
+    name: string,
+    executable: string,
+    icon: image,
+}
+
+export struct Profile {
+    name: string,
+    id: string,
+    active: bool,
+    application: string,
+}
+
+export struct Keybind {
+    application: string,
+    input: string,
+    output: string,
+    vk-input: int,
+    vk-output: int,
+}
+
+export global Config {
+    in-out property <Application> active-application;
+    in-out property <[Application]> applications: [
+        { name: "Game 1", icon: @image-url("../assets/broken_image.png") },
+        { name: "Game 2", icon: @image-url("../assets/broken_image.png") },
+        { name: "Game 3", icon: @image-url("../assets/broken_image.png") }
+    ];
+    in-out property <[Keybind]> keybinds: [{ input: "a", output: "b" }, { input: "c", output: "d" }, { input: "e", output: "g" }];
+    in-out property <[Process]> processes: [
+        {
+            name: "one",
+            executable: "/a/b/c.exe",
+            icon: @image-url("../assets/broken_image.png")
+        },
+        {
+            name: "two",
+            executable: "/d/e/f.exe",
+            icon: @image-url("../assets/broken_image.png")
+        },
+        {
+            name: "three",
+            executable: "/g/h/i.exe",
+            icon: @image-url("../assets/broken_image.png")
+        }
+    ];
+    in-out property <[Profile]> profiles: [
+        { name: "one", active: true, id: "1234-1234-1234" },
+        { name: "two", id: "1234-1234-1234" },
+        { name: "three", id: "1234-1234-1234" }
+    ];
+
+    in-out property <string> name;
+    in-out property <string> image;
+    in-out property <string> executable;
+}
+
+export global Color {
+    out property <color> brand: #01a7e1;
+    out property <color> foreground: #ffffff;
+    out property <color> primary: #a7a7a7;
+    out property <color> secondary: #757575;
+    out property <color> tertiary: #272727;
+    out property <color> background: #000000;
+    out property <color> danger: #e71313;
+
+    out property <color> background-accent: #383838;
+    out property <color> primary-accent: #c7c7c7;
+    out property <color> secondary-accent: #9c9c9c;
+    out property <color> tertiary-accent: #505050;
+    out property <color> danger-accent: #ff4040;
+}
+
+export global Dimensions {
+    out property <length> small: 4px;
+    out property <length> medium: 8px;
+    out property <length> large: 12px;
+    out property <length> huge: 16px;
+
+    out property <length> font-small: 10px;
+    out property <length> font-big: 16px;
+    out property <length> font-title: 20px;
+
+    out property <int> font-thin: 1;
+    out property <int> font-bold: 900;
+}

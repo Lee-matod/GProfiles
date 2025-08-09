@@ -1,0 +1,270 @@
+import { ApplicationType, Color, Config, Dimensions, Keybind, Profile } from "objects.slint";
+import { Field, CollapsableContainer, HoverableComponent } from "components.slint";
+import { ScrollView } from "std-widgets.slint";
+
+component Tab inherits Rectangle {
+    in property <string> name;
+    in-out property <string> active-tab;
+
+    public pure function is-active() -> bool {
+        return self.name == self.active-tab;
+    }
+
+    width: 96px;
+    height: 32px;
+    background: touch-area.has-hover && !self.is-active() ? Color.primary : Color.secondary;
+
+    border-color: Color.tertiary;
+    border-width: Dimensions.small;
+    border-top-left-radius: Dimensions.medium;
+    border-top-right-radius: Dimensions.medium;
+
+    animate background { duration: 150ms; }
+
+    touch-area := TouchArea {
+        clicked => {
+            root.active-tab = root.name;
+        }
+    }
+
+    Text {
+        text: name;
+        color: root.is-active() ? Color.brand : #000000;
+        font-weight: 900;
+    }
+
+    Rectangle {
+        y: root.height - root.border-width - (is-active() ? 1px : 0px);
+        width: root.width - (2 * root.border-width);
+        height: root.border-width + (is-active() ? 2px : 0px);
+        background: root.is-active() ? root.background : root.border-color;
+    }
+}
+
+component KeybindsContainer inherits Rectangle {
+    background: Color.background;
+    border-radius: Dimensions.medium;
+
+    ScrollView {
+        private property <physical-length> keybind-height: 40px;
+
+        viewport-width: parent.width;
+        viewport-height: (Config.keybinds.length + 1) * (self.keybind-height + Dimensions.medium) + Dimensions.medium;
+        vertical-scrollbar-policy: always-off;
+
+        HoverableComponent {
+            y: Config.keybinds.length * (keybind-height + Dimensions.medium) + Dimensions.medium;
+            width: parent.width - Dimensions.huge;
+            height: keybind-height;
+
+            hover: Color.background-accent;
+            default: Color.background;
+
+            border-color: Color.foreground;
+            border-width: Dimensions.small / 2;
+            border-radius: Dimensions.medium;
+
+            Image {
+                x: Dimensions.large;
+                width: parent.height - Dimensions.large;
+                height: parent.height - Dimensions.large;
+                source: @image-url("../assets/add.png");
+                colorize: Color.foreground;
+            }
+
+            Text {
+                x: parent.height + Dimensions.medium;
+                text: "Add new keybind...";
+                color: Color.foreground;
+            }
+        }
+
+        for i in Config.keybinds.length: Rectangle {
+            private property <Keybind> keybind: Config.keybinds[i];
+
+            y: i * (keybind-height + Dimensions.medium) + Dimensions.medium;
+            width: parent.width - Dimensions.huge;
+            height: keybind-height;
+
+            input-rect := HoverableComponent {
+                x: Dimensions.small;
+                width: parent.width / 3 - Dimensions.huge;
+
+                default: Color.secondary;
+                hover: Color.secondary-accent;
+                border-radius: Dimensions.medium;
+
+                Text {
+                    text: keybind.input;
+                    font-size: Dimensions.font-big;
+                    font-weight: Dimensions.font-bold;
+                }
+            }
+
+            arrow-img := Image {
+                x: input-rect.x + input-rect.width + Dimensions.medium;
+                width: parent.height - Dimensions.huge;
+                height: parent.height - Dimensions.huge;
+                source: @image-url("../assets/arrow.png");
+                colorize: Color.foreground;
+            }
+
+            output-rect := HoverableComponent {
+                x: arrow-img.x + arrow-img.width + Dimensions.medium;
+                width: parent.width / 3 - Dimensions.huge;
+
+                default: Color.secondary;
+                hover: Color.secondary-accent;
+                border-radius: Dimensions.medium;
+
+                Text {
+                    text: keybind.output;
+                    font-size: Dimensions.font-big;
+                    font-weight: Dimensions.font-bold;
+                }
+            }
+
+            HoverableComponent {
+                x: output-rect.x + output-rect.width + Dimensions.huge;
+                width: parent.width / 3 - Dimensions.huge * 2;
+
+                default: Color.danger;
+                hover: Color.danger-accent;
+                border-radius: Dimensions.medium;
+
+                Image {
+                    width: parent.width - Dimensions.huge;
+                    source: @image-url("../assets/delete.png");
+                }
+            }
+        }
+    }
+}
+
+component DetailsContainer inherits Rectangle {
+    Field {
+        x: Dimensions.huge * 2;
+        y: Dimensions.large;
+        width: parent.width - self.x - keybinds.width - keybinds.y - Dimensions.huge;
+        name: "Name";
+        value <=> Config.name;
+    }
+
+    Field {
+        x: Dimensions.huge * 2;
+        y: parent.height / 2 - self.height + Dimensions.large * 2;
+        width: parent.width - self.x - keybinds.width - keybinds.y - Dimensions.huge;
+        name: "Image";
+        value <=> Config.image;
+    }
+
+    Field {
+        x: Dimensions.huge * 2;
+        y: parent.height - self.height - Dimensions.huge;
+        width: parent.width - self.x - keybinds.width - keybinds.y - Dimensions.huge;
+        name: "Executable";
+        value <=> Config.executable;
+    }
+
+    keybinds := KeybindsContainer {
+        y: Dimensions.huge;
+        x: parent.width - self.width - Dimensions.huge;
+        width: parent.width * 40%;
+        height: parent.height - self.y - Dimensions.huge;
+    }
+}
+
+component ProfileViewerContainer inherits Rectangle {
+    background: Color.background;
+    border-radius: Dimensions.medium;
+
+    ScrollView {
+        private property <physical-length> profile-height: 64px;
+
+        viewport-width: parent.width;
+        viewport-height: (Config.profiles.length + 1) * (self.profile-height + Dimensions.medium) + Dimensions.medium;
+        vertical-scrollbar-policy: always-off;
+
+        for i in Config.profiles.length: HoverableComponent {
+            private property <Profile> profile: Config.profiles[i];
+
+            y: i * (profile-height + Dimensions.medium) + Dimensions.medium;
+            width: parent.width - Dimensions.huge;
+            height: profile-height;
+
+            default: Color.tertiary;
+            hover: Color.tertiary-accent;
+            border-radius: Dimensions.medium;
+            border-width: Dimensions.small;
+            border-color: profile.active ? Color.brand : self.background;
+
+            name-text := Text {
+                x: Dimensions.large;
+                y: Dimensions.large;
+                text: profile.name;
+                color: Color.foreground;
+                font-size: Dimensions.font-big + Dimensions.small;
+            }
+
+            Text {
+                x: Dimensions.large;
+                y: Dimensions.huge + name-text.height;
+                text: profile.id;
+                color: Color.primary;
+            }
+        }
+    }
+}
+
+component ProfilesContainer inherits Rectangle {
+    ProfileViewerContainer {
+        y: Dimensions.huge;
+        x: Dimensions.huge;
+        width: parent.width * 40%;
+        height: parent.height - self.y - Dimensions.huge;
+    }
+}
+
+component AdvancedContainer inherits Rectangle { }
+
+export component ApplicationEditor inherits Rectangle {
+    private property <string> active-tab: tabs[1];
+    private property <[string]> tabs: ["Details", "Profiles", "Advanced"];
+
+    background-item := Rectangle {
+        y: 28px;
+        height: parent.height - self.y;
+        background: Color.secondary;
+        border-radius: Dimensions.medium;
+        border-width: Dimensions.small;
+        border-color: Color.tertiary;
+    }
+
+    for index in tabs.length: Tab {
+        x: 96px * index + Dimensions.huge * 2;
+        y: 0;
+        name: tabs[index];
+        active-tab <=> root.active-tab;
+    }
+
+    if self.active-tab == "Details": DetailsContainer {
+        x: background-item.x;
+        y: background-item.y;
+        width: background-item.width;
+        height: background-item.height;
+    }
+
+    if self.active-tab == "Advanced": AdvancedContainer {
+        x: background-item.x;
+        y: background-item.y;
+        width: background-item.width;
+        height: background-item.height;
+    }
+
+    if self.active-tab == "Profiles": ProfilesContainer {
+        x: background-item.x;
+        y: background-item.y;
+        width: background-item.width;
+        height: background-item.height;
+    }
+}

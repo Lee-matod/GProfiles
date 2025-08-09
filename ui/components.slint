@@ -1,29 +1,44 @@
-import { AboutSlint } from "std-widgets.slint";
+import { Dimensions, Color } from "objects.slint";
+import { LineEdit } from "std-widgets.slint";
 
-export component SlintAttribution inherits Rectangle {
-    AboutSlint {
-        height: 20px;
+export enum FieldInputType { editable, selectable, readable}
+
+export component CollapsableContainer inherits Rectangle {
+    in property <string> name;
+    in-out property <bool> is-collapsed: true;
+
+    TouchArea {
+        clicked => {
+            root.is-collapsed = !root.is-collapsed;
+        }
     }
 
-    AboutSlint {
-        x: 110px;
-        y: 70px;
-        height: 20px;
+    image := Image {
+        x: Dimensions.small;
+        width: Dimensions.large;
+        height: Dimensions.large;
+        colorize: Color.secondary;
+        source: @image-url("../assets/arrow.png");
+        rotation-angle: root.is-collapsed ? 0 : 90deg;
+
+        animate rotation-angle {
+             duration: 150ms;
+        }
+    }
+
+    text := Text {
+        x: image.x + image.width + Dimensions.small;
+        text: name;
+        color: Color.secondary;
+        font-weight: Dimensions.font-bold;
     }
 
     Rectangle {
-        x: 410px;
-        y: 80px;
-        width: 110px;
-        height: 50px;
-        background: #3b3b3b;
-    }
-
-    Rectangle {
-        y: 180px;
-        height: 10px;
-        width: 80px;
-        background: #000000;
+        x: text.x + text.width + Dimensions.small;
+        width: parent.width - self.x - Dimensions.large;
+        height: Dimensions.small;
+        background: Color.secondary;
+        border-radius: Dimensions.medium;
     }
 }
 
@@ -41,5 +56,37 @@ export component HoverableComponent inherits Rectangle {
         clicked => {
             root.clicked()
         }
+    }
+}
+
+export component Title inherits Text {
+    color: Color.brand;
+    font-size: Dimensions.font-title;
+    font-weight: Dimensions.font-bold;
+    horizontal-alignment: center;
+}
+
+export component Field inherits Rectangle {
+    in property <string> name;
+    in property <string> placeholder;
+    in property <FieldInputType> input-type;
+    in-out property <string> value;
+
+    height: title.height + field.height;
+
+    title := Title {
+        x: 0;
+        y: 0;
+        text: name;
+    }
+
+    field := LineEdit {
+        x: 0;
+        y: title.height;
+        width: parent.width;
+        text <=> value;
+        placeholder-text: root.placeholder;
+        read-only: input-type == FieldInputType.selectable;
+        enabled: input-type != FieldInputType.readable;
     }
 }

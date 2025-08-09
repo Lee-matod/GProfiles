@@ -1,0 +1,69 @@
+import { Application, ApplicationType, Color, Dimensions, Config } from "objects.slint";
+import { ScrollView } from "std-widgets.slint";
+
+export component ApplicationCard inherits Rectangle {
+    callback clicked(Application);
+    in property <Application> application;
+
+    width: 164px;
+    height: 200px;
+    background: area.has-hover ? Color.secondary : Color.tertiary;
+    border-radius: Dimensions.medium;
+
+    animate background { duration: 150ms; }
+
+    area := TouchArea {
+        clicked => {
+            root.clicked(root.application);
+        }
+    }
+
+    Text {
+        y: parent.height * 3 / 4;
+        width: parent.width - Dimensions.huge;
+        text: application.type == ApplicationType.installed ? "" : application.name;
+        horizontal-alignment: center;
+        color: Color.foreground;
+        font-size: Dimensions.font-big;
+        overflow: elide;
+    }
+
+    Image {
+        width: application.type == ApplicationType.installed ? parent.width : 48px;
+        height: application.type == ApplicationType.installed ? parent.height : 48px;
+        source: application.icon;
+        colorize: application.executable.is-empty ? Color.foreground : #00000000;
+    }
+
+    if application.executable == "" && application.type == ApplicationType.installed: Rectangle {
+        background: #00000075;
+
+        Text {
+            text: "NOT INSTALLED";
+            color: Color.primary;
+        }
+    }
+
+    // We create another rectangle for the outline to ensure that it is drawn *over* the image
+    Rectangle {
+        border-radius: Dimensions.medium;
+        border-width: area.has-hover || application == Config.active-application ? Dimensions.small : 0px;
+        border-color: Color.brand;
+
+        animate border-width { duration: 150ms; }
+    }
+}
+
+export component ApplicationContainer inherits ScrollView {
+    viewport-width: 180px * Config.applications.length;
+    viewport-height: 200px;
+    horizontal-scrollbar-policy: always-off;
+
+    for i in Config.applications.length: ApplicationCard {
+        x: i * 180px;
+        application: Config.applications[i];
+        clicked(application) => {
+            Config.active-application = application;
+        }
+    }
+}

@@ -1,0 +1,75 @@
+import { LineEdit, ScrollView } from "std-widgets.slint";
+import { HoverableComponent, Title } from "components.slint";
+import { Process, Config, Color, Dimensions } from "objects.slint";
+
+export component ProcessView inherits HoverableComponent {
+    in property <Process> process;
+
+    border-radius: Dimensions.small;
+    hover: Color.secondary;
+    default: Color.tertiary;
+
+    icon := Image {
+        x: Dimensions.small;
+        width: Dimensions.large * 2;
+        height: Dimensions.large * 2;
+        source: root.process.icon;
+    }
+
+    name := Text {
+        x: icon.width + Dimensions.medium;
+        y: Dimensions.small;
+        width: parent.width - self.x - Dimensions.small;
+        text: process.name;
+        color: Color.foreground;
+        overflow: elide;
+    }
+
+    Text {
+        x: name.x;
+        y: name.height + name.y;
+        width: parent.width - self.x - 2px;
+        text: process.executable;
+        color: Color.primary;
+        font-size: Dimensions.font-small;
+    }
+}
+
+export component ProcessContainer inherits Rectangle {
+    callback process-clicked(Process);
+
+    in-out property <string> query;
+    private property <length> process-height: Dimensions.huge * 2;
+    private property <length> process-padding: Dimensions.small;
+
+    title := Title {
+        y: 0px;
+        text: "RUNNING APPS";
+    }
+
+    search-box := LineEdit {
+        y: title.height + Dimensions.small;
+        width: parent.width - Dimensions.large * 2;
+        height: 20px;
+        text <=> query;
+        placeholder-text: "Search...";
+    }
+
+    ScrollView {
+        y: search-box.y + search-box.height + Dimensions.large;
+        width: search-box.width;
+        height: parent.height - search-box.height - Dimensions.large * 3;
+        viewport-height: Config.processes.length * (root.process-height + process-padding);
+        horizontal-scrollbar-policy: always-off;
+
+        for i in Config.processes.length: ProcessView {
+            y: i * (root.process-height + process-padding);
+            height: process-height;
+            width: parent.width - Dimensions.large;
+            process: Config.processes[i];
+            clicked => {
+                root.process-clicked(self.process);
+            }
+        }
+    }
+}
