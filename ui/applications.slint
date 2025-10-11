@@ -1,4 +1,4 @@
-import { Application, ApplicationType, Color, Dimensions, Config } from "objects.slint";
+import { Application, ApplicationType, Color, Config, Dimensions } from "objects.slint";
 import { ScrollView } from "std-widgets.slint";
 
 export component ApplicationCard inherits Rectangle {
@@ -55,15 +55,17 @@ export component ApplicationCard inherits Rectangle {
 }
 
 export component ApplicationContainer inherits ScrollView {
-    viewport-width: 180px * Config.applications.length;
+    viewport-width: 180px * Config.applications.length + Dimensions.huge * 3;
     viewport-height: 200px;
     horizontal-scrollbar-policy: always-off;
+    mouse-drag-pan-enabled: true;
 
     for i in Config.applications.length: ApplicationCard {
         x: i * 180px;
         application: Config.applications[i];
+
         clicked(application) => {
-            Config.active-application = application;
+            Config.select-application(application);
         }
     }
 }

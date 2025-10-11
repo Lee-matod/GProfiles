@@ -32,6 +32,8 @@ export struct Keybind {
 
 export global Config {
     in-out property <Application> active-application;
+    in-out property <Profile> active-profile;
+
     in-out property <[Application]> applications: [
         { name: "Game 1", icon: @image-url("../assets/broken_image.png") },
         { name: "Game 2", icon: @image-url("../assets/broken_image.png") },
@@ -64,6 +66,37 @@ export global Config {
     in-out property <string> name;
     in-out property <string> image;
     in-out property <string> executable;
+    in-out property <string> profile-name;
+    in-out property <string> profile-id;
+    in-out property <string> settings-path;
+
+    // Processes
+    pure callback add-process(Process);
+
+    // Applications
+    pure callback create-application();
+    pure callback select-application(Application);
+    pure callback change-name(string);
+    pure callback change-image();
+    pure callback change-executable();
+    pure callback delete-application();
+
+    // Keybinds
+    pure callback create-keybind();
+    pure callback input-clicked(Keybind, string);
+    pure callback output-clicked(Keybind, string);
+    pure callback delete-keybind(Keybind);
+
+    // Profiles
+    pure callback select-profile(Profile);
+    pure callback duplicate-profile(Application);
+    pure callback name-profile(string);
+    pure callback delete-profile();
+    
+    // Other
+    pure callback select-settings();
+    pure callback restart-lghub();
+    pure callback open-github();
 }
 
 export global Color {
@@ -74,6 +107,7 @@ export global Color {
     out property <color> tertiary: #272727;
     out property <color> background: #000000;
     out property <color> danger: #e71313;
+    out property <color> active: #66ff47;
 
     out property <color> background-accent: #383838;
     out property <color> primary-accent: #c7c7c7;

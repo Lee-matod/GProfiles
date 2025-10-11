@@ -1,7 +1,8 @@
-import { Dimensions, Color } from "objects.slint";
+import { Color, Dimensions } from "objects.slint";
 import { LineEdit } from "std-widgets.slint";
 
 export enum FieldInputType { editable, selectable, readable}
+export enum Location { top, bottom, left, right }
 
 export component CollapsableContainer inherits Rectangle {
     in property <string> name;
@@ -21,9 +22,7 @@ export component CollapsableContainer inherits Rectangle {
         source: @image-url("../assets/arrow.png");
         rotation-angle: root.is-collapsed ? 0 : 90deg;
 
-        animate rotation-angle {
-             duration: 150ms;
-        }
+        animate rotation-angle { duration: 150ms; }
     }
 
     text := Text {
@@ -42,8 +41,63 @@ export component CollapsableContainer inherits Rectangle {
     }
 }
 
+export component DropdownMenu inherits Rectangle {
+    public pure function is-visible() -> bool {
+        return !self.is-collapsed;
+    }
+
+    public function show() {
+        self.set-visibility(true)
+    }
+
+    public function hide() {
+        self.set-visibility(false);
+    }
+
+    public function set-visibility(visible: bool) {
+        self.is-collapsed = !visible;
+    }
+
+    in-out property <string> selected;
+    out property <physical-length> left-padding: image.width + Dimensions.small * 2;
+    private property <bool> is-collapsed: true;
+
+    height: text.height + Dimensions.medium;
+    background: area.has-hover ? Color.background-accent : Color.background;
+
+    border-radius: Dimensions.medium;
+    border-bottom-left-radius: !root.is-visible() ? Dimensions.medium : 0px;
+    border-bottom-right-radius: !root.is-visible() ? Dimensions.medium : 0px;
+
+    animate border-bottom-left-radius, border-bottom-right-radius, background { duration: 150ms; }
+
+    area := TouchArea {
+        clicked => {
+            root.set-visibility(!root.is-visible());
+        }
+    }
+
+    text := Text {
+        x: image.width + Dimensions.small * 2;
+        text: selected;
+        color: Color.foreground;
+    }
+
+    image := Image {
+        x: Dimensions.small;
+        width: Dimensions.large;
+        height: Dimensions.large;
+        colorize: Color.foreground;
+        source: @image-url("../assets/arrow.png");
+        rotation-angle: root.is-collapsed ? 0 : 90deg;
+
+        animate rotation-angle { duration: 150ms; }
+    }
+}
+
 export component HoverableComponent inherits Rectangle {
     callback clicked();
+    callback double-clicked();
 
     in property <color> hover;
     in property <color> default;
@@ -55,7 +109,11 @@ export component HoverableComponent inherits Rectangle {
     area := TouchArea {
         clicked => {
             root.clicked()
-        }
+        };
+
+        double-clicked => {
+            root.double-clicked()
+        };
     }
 }
 
@@ -66,7 +124,56 @@ export component Title inherits Text {
     horizontal-alignment: center;
 }
 
+export component ImageButton {
+    callback clicked();
+    callback double-clicked();
+
+    in property <image> icon;
+    in property <string> text;
+    in property <Location> icon-position: Location.left;
+
+    in property <color> background;
+    in property <color> hover;
+    in property <length> corner-radius;
+
+    in property <length> font-size;
+    in property <int> font-weight;
+
+    width: txt.width + img.width + Dimensions.large;
+
+    HoverableComponent {
+        default: root.background;
+        hover: root.hover;
+        border-radius: root.corner-radius;
+
+        clicked() => {
+            root.clicked()
+        }
+
+        double-clicked => {
+            root.double-clicked()
+        }
+    }
+
+    img := Image {
+        x: (icon-position == Location.right ? txt.width + Dimensions.small : 0) + Dimensions.small;
+        height: parent.height;
+        source: root.icon;
+    }
+
+    txt := Text {
+        x: (icon-position == Location.left ? img.width + Dimensions.small : 0) + Dimensions.small;
+        text: root.text;
+        font-size: root.font-size;
+        font-weight: root.font-weight;
+    }
+}
+
 export component Field inherits Rectangle {
+    callback clicked();
+    callback double-clicked();
+    callback accepted(string);
+
     in property <string> name;
     in property <string> placeholder;
     in property <FieldInputType> input-type;
@@ -80,13 +187,33 @@ export component Field inherits Rectangle {
         text: name;
     }
 
-    field := LineEdit {
+    TouchArea {
         x: 0;
         y: title.height;
         width: parent.width;
-        text <=> value;
-        placeholder-text: root.placeholder;
-        read-only: input-type == FieldInputType.selectable;
-        enabled: input-type != FieldInputType.readable;
+        height: field.height;
+
+        field := LineEdit {
+            x: 0px;
+            y: 0px;
+            width: parent.width;
+
+            text <=> value;
+            placeholder-text: root.placeholder;
+            read-only: input-type == FieldInputType.selectable;
+            enabled: input-type != FieldInputType.readable;
+
+            accepted(text) => {
+                root.accepted(text)
+            }
+        }
+
+        clicked => {
+            root.clicked()
+        }
+
+        double-clicked => {
+            root.double-clicked()
+        }
     }
 }

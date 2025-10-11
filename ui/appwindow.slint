@@ -1,4 +1,4 @@
-import { Color, Dimensions } from "objects.slint";
+import { Color, Config, Dimensions } from "objects.slint";
 import { ProcessContainer } from "processes.slint";
 import { Title } from "components.slint";
 import { ApplicationCard, ApplicationContainer } from "applications.slint";
@@ -26,6 +26,10 @@ export component App inherits Window {
             name: "NEW",
             icon: @image-url("../assets/add.png"),
         };
+
+        clicked => {
+            Config.create-application();
+        }
     }
 
     profiles := Title {

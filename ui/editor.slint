@@ -1,6 +1,6 @@
-import { ApplicationType, Color, Config, Dimensions, Keybind, Profile } from "objects.slint";
-import { Field, CollapsableContainer, HoverableComponent } from "components.slint";
-import { ScrollView } from "std-widgets.slint";
+import { Application, ApplicationType, Color, Config, Dimensions, Keybind, Profile } from "objects.slint";
+import { CollapsableContainer, DropdownMenu, Field, FieldInputType, HoverableComponent, ImageButton } from "components.slint";
+import { AboutSlint, Button, ScrollView } from "std-widgets.slint";
 
 component Tab inherits Rectangle {
     in property <string> name;
@@ -45,12 +45,127 @@ component KeybindsContainer inherits Rectangle {
     background: Color.background;
     border-radius: Dimensions.medium;
 
+    // Help
+    function unprintable-key(key: string) -> string {
+        if (key == Key.Backspace) {
+            return "⌫";
+        } else if (key == Key.Tab) {
+            return "↹";
+        } else if (key == Key.Return) {
+            return "↵";
+        } else if (key == Key.Escape) {
+            return "Esc";
+        } else if (key == Key.Backtab) {
+            return "Backtab";
+        } else if (key == Key.Delete) {
+            return "Delete";
+        } else if (key == Key.Shift) {
+            return "Shift";
+        } else if (key == Key.Control) {
+            return "Ctrl";
+        } else if (key == Key.Alt) {
+            return "Alt";
+        } else if (key == Key.AltGr) {
+            return "AltGr";
+        } else if (key == Key.CapsLock) {
+            return "CapsLock";
+        } else if (key == Key.ShiftR) {
+            return "RShift";
+        } else if (key == Key.ControlR) {
+            return "RControl";
+        } else if (key == Key.Meta) {
+            return "Meta";
+        } else if (key == Key.MetaR) {
+            return "RMeta";
+        } else if (key == Key.Space) {
+            return "Space";
+        } else if (key == Key.UpArrow) {
+            return "↑";
+        } else if (key == Key.DownArrow) {
+            return "↓";
+        } else if (key == Key.LeftArrow) {
+            return "←";
+        } else if (key == Key.RightArrow) {
+            return "→";
+        } else if (key == Key.F1) {
+            return "F1";
+        } else if (key == Key.F2) {
+            return "F2";
+        } else if (key == Key.F3) {
+            return "F3";
+        } else if (key == Key.F4) {
+            return "F4";
+        } else if (key == Key.F5) {
+            return "F5";
+        } else if (key == Key.F6) {
+            return "F6";
+        } else if (key == Key.F7) {
+            return "F7";
+        } else if (key == Key.F8) {
+            return "F8";
+        } else if (key == Key.F9) {
+            return "F9";
+        } else if (key == Key.F10) {
+            return "F10";
+        } else if (key == Key.F11) {
+            return "F11";
+        } else if (key == Key.F12) {
+            return "F12";
+        } else if (key == Key.F13) {
+            return "F13";
+        } else if (key == Key.F14) {
+            return "F14";
+        } else if (key == Key.F15) {
+            return "F15";
+        } else if (key == Key.F16) {
+            return "F16";
+        } else if (key == Key.F17) {
+            return "F17";
+        } else if (key == Key.F18) {
+            return "F18";
+        } else if (key == Key.F19) {
+            return "F19";
+        } else if (key == Key.F20) {
+            return "F20";
+        } else if (key == Key.F21) {
+            return "F21";
+        } else if (key == Key.F22) {
+            return "F22";
+        } else if (key == Key.F23) {
+            return "F23";
+        } else if (key == Key.F24) {
+            return "F24";
+        } else if (key == Key.Insert) {
+            return "Insert";
+        } else if (key == Key.Home) {
+            return "Home";
+        } else if (key == Key.End) {
+            return "End";
+        } else if (key == Key.PageUp) {
+            return "PageUp";
+        } else if (key == Key.PageDown) {
+            return "PageDown";
+        } else if (key == Key.ScrollLock) {
+            return "ScrollLock";
+        } else if (key == Key.Pause) {
+            return "Pause";
+        } else if (key == Key.SysReq) {
+            return "SysReq";
+        } else if (key == Key.Stop) {
+            return "Stop";
+        } else if (key == Key.Menu) {
+            return "Menu";
+        }
+        return key;
+    }
+
     ScrollView {
         private property <physical-length> keybind-height: 40px;
 
         viewport-width: parent.width;
         viewport-height: (Config.keybinds.length + 1) * (self.keybind-height + Dimensions.medium) + Dimensions.medium;
         vertical-scrollbar-policy: always-off;
+        mouse-drag-pan-enabled: true;
 
         HoverableComponent {
             y: Config.keybinds.length * (keybind-height + Dimensions.medium) + Dimensions.medium;
@@ -77,6 +192,10 @@ component KeybindsContainer inherits Rectangle {
                 text: "Add new keybind...";
                 color: Color.foreground;
             }
+
+            clicked => {
+                Config.create-keybind();
+            }
         }
 
         for i in Config.keybinds.length: Rectangle {
@@ -87,17 +206,34 @@ component KeybindsContainer inherits Rectangle {
             height: keybind-height;
 
             input-rect := HoverableComponent {
+                private property <string> key;
                 x: Dimensions.small;
                 width: parent.width / 3 - Dimensions.huge;
-
                 default: Color.secondary;
                 hover: Color.secondary-accent;
                 border-radius: Dimensions.medium;
+                forward-focus: input-scope;
 
                 Text {
-                    text: keybind.input;
+                    text: parent.key;
                     font-size: Dimensions.font-big;
                     font-weight: Dimensions.font-bold;
+                }
+
+                input-scope := FocusScope {
+                    focus-gained(reason) => {
+                        if (reason == FocusReason.pointer-click) {
+                            parent.key = "..."
+                        }
+                    }
+
+                    key-pressed(event) => {
+                        let char = unprintable-key(event.text);
+                        Config.input-clicked(keybind, char);
+                        parent.key = char;
+                        input-scope.clear-focus();
+                        accept
+                    }
                 }
             }
 
@@ -110,17 +246,42 @@ component KeybindsContainer inherits Rectangle {
             }
 
             output-rect := HoverableComponent {
+                private property <string> key;
+
                 x: arrow-img.x + arrow-img.width + Dimensions.medium;
                 width: parent.width / 3 - Dimensions.huge;
 
                 default: Color.secondary;
                 hover: Color.secondary-accent;
                 border-radius: Dimensions.medium;
+                forward-focus: output-scope;
 
                 Text {
-                    text: keybind.output;
+                    text: parent.key;
                     font-size: Dimensions.font-big;
                     font-weight: Dimensions.font-bold;
+                }
+
+                output-scope := FocusScope {
+                    focus-gained(reason) => {
+                        if (reason == FocusReason.pointer-click) {
+                            parent.key = "..."
+                        }
+                    }
+
+                    focus-lost(reason) => {
+                        if (parent.key == "...") {
+                            parent.key = ""
+                        }
+                    }
+
+                    key-pressed(event) => {
+                        let char = unprintable-key(event.text);
+                        Config.output-clicked(keybind, char);
+                        parent.key = char;
+                        output-scope.clear-focus();
+                        accept
+                    }
                 }
             }
 
@@ -136,6 +297,10 @@ component KeybindsContainer inherits Rectangle {
                     width: parent.width - Dimensions.huge;
                     source: @image-url("../assets/delete.png");
                 }
+
+                clicked => {
+                    Config.delete-keybind(keybind);
+                }
             }
         }
     }
@@ -148,6 +313,11 @@ component DetailsContainer inherits Rectangle {
         width: parent.width - self.x - keybinds.width - keybinds.y - Dimensions.huge;
         name: "Name";
         value <=> Config.name;
+        input-type: Config.name == "APPLICATION_NAME_DESKTOP" ? FieldInputType.readable : FieldInputType.editable;
+
+        accepted(text) => {
+            Config.change-name(text)
+        }
     }
 
     Field {
@@ -156,6 +326,17 @@ component DetailsContainer inherits Rectangle {
         width: parent.width - self.x - keybinds.width - keybinds.y - Dimensions.huge;
         name: "Image";
         value <=> Config.image;
+        input-type: Config.active-application.type == ApplicationType.custom ? FieldInputType.selectable : FieldInputType.readable;
+
+        clicked => {
+            if (self.input-type == FieldInputType.readable) {
+                Config.change-image()
+            }
+        }
+
+        double-clicked => {
+            Config.change-image()
+        }
     }
 
     Field {
@@ -164,6 +345,17 @@ component DetailsContainer inherits Rectangle {
         width: parent.width - self.x - keybinds.width - keybinds.y - Dimensions.huge;
         name: "Executable";
         value <=> Config.executable;
+        input-type: Config.active-application.type == ApplicationType.custom ? FieldInputType.selectable : FieldInputType.readable;
+
+        clicked => {
+            if (self.input-type == FieldInputType.readable) {
+                Config.change-executable()
+            }
+        }
+
+        double-clicked => {
+            Config.change-executable()
+        }
     }
 
     keybinds := KeybindsContainer {
@@ -182,8 +374,9 @@ component ProfileViewerContainer inherits Rectangle {
         private property <physical-length> profile-height: 64px;
 
         viewport-width: parent.width;
-        viewport-height: (Config.profiles.length + 1) * (self.profile-height + Dimensions.medium) + Dimensions.medium;
+        viewport-height: (Config.profiles.length + 1) * (self.profile-height - Dimensions.medium);
         vertical-scrollbar-policy: always-off;
+        mouse-drag-pan-enabled: true;
 
         for i in Config.profiles.length: HoverableComponent {
             private property <Profile> profile: Config.profiles[i];
@@ -196,7 +389,7 @@ component ProfileViewerContainer inherits Rectangle {
             hover: Color.tertiary-accent;
             border-radius: Dimensions.medium;
             border-width: Dimensions.small;
-            border-color: profile.active ? Color.brand : self.background;
+            border-color: profile.id == Config.profile-id ? Color.brand : self.background;
 
             name-text := Text {
                 x: Dimensions.large;
@@ -212,23 +405,244 @@ component ProfileViewerContainer inherits Rectangle {
                 text: profile.id;
                 color: Color.primary;
             }
+
+            if profile.active: Rectangle {
+                x: parent.width - parent.x - Dimensions.huge;
+                y: Dimensions.medium;
+                width: Dimensions.huge;
+                height: Dimensions.huge;
+                background: Color.active;
+                border-radius: 50px;
+            }
+
+            clicked => {
+                Config.select-profile(profile)
+            }
         }
     }
 }
 
 component ProfilesContainer inherits Rectangle {
-    ProfileViewerContainer {
+    private property <Application> duplicate-application: Config.active-application;
+
+    viewer := ProfileViewerContainer {
         y: Dimensions.huge;
         x: Dimensions.huge;
         width: parent.width * 40%;
         height: parent.height - self.y - Dimensions.huge;
     }
+
+    name := Field {
+        x: viewer.x + viewer.width + Dimensions.huge;
+        y: viewer.y;
+        width: parent.width - self.x - Dimensions.huge;
+
+        name: "Name";
+        value <=> Config.profile-name;
+        input-type: Config.profile-name == "PROFILE_NAME_DEFAULT" ? FieldInputType.readable : FieldInputType.editable;
+
+        accepted(text) => {
+            Config.name-profile(text);
+        }
+    }
+
+    dropdown := DropdownMenu {
+        x: viewer.x + viewer.width + Dimensions.huge;
+        y: name.height + name.y + Dimensions.huge + Dimensions.small;
+        width: parent.width - self.x - Dimensions.huge * 1.5 - duplicate.width;
+        selected: duplicate-application.name;
+    }
+
+    Rectangle {
+        x: dropdown.x;
+        y: dropdown.y + dropdown.height;
+        width: dropdown.width;
+        height: dropdown.is-visible() ? parent.height - self.y - delete.height - Dimensions.huge : 0px;
+        animate height { duration: 150ms; }
+
+        ScrollView {
+            private property <physical-length> name-height: Dimensions.large * 2;
+
+            width: parent.width;
+            height: parent.height;
+            viewport-width: parent.width;
+            viewport-height: Config.applications.length * self.name-height;
+            vertical-scrollbar-policy: always-off;
+
+            for i in Config.applications.length: HoverableComponent {
+                private property <Application> application: Config.applications[i];
+
+                y: i * name-height;
+                width: parent.width;
+                height: parent.name-height;
+
+                default: Color.background;
+                hover: Color.background-accent;
+                border-bottom-left-radius: i == Config.applications.length - 1 ? Dimensions.medium : 0;
+                border-bottom-right-radius: i == Config.applications.length - 1 ? Dimensions.medium : 0;
+
+                Text {
+                    x: dropdown.left-padding;
+                    text: application.name;
+                    color: Color.foreground;
+                }
+
+                clicked => {
+                    root.duplicate-application = application;
+                    dropdown.hide();
+                }
+            }
+        }
+    }
+
+    duplicate := ImageButton {
+        x: parent.width - self.width - Dimensions.huge;
+        y: name.height + name.y + Dimensions.huge;
+        height: 28px;
+
+        icon: @image-url("../assets/copy.png");
+        text: "Duplicate";
+
+        corner-radius: Dimensions.small;
+        font-size: Dimensions.font-big;
+        font-weight: Dimensions.font-bold;
+        background: Color.primary;
+        hover: Color.primary-accent;
+
+        clicked => {
+            Config.duplicate-profile(root.duplicate-application);
+        }
+    }
+
+    delete := ImageButton {
+        x: parent.width - self.width - Dimensions.huge;
+        y: parent.height - self.height - Dimensions.huge;
+        height: 28px;
+        icon: @image-url("../assets/delete.png");
+        text: "Delete";
+
+        corner-radius: Dimensions.small;
+        font-size: Dimensions.font-big;
+        font-weight: Dimensions.font-bold;
+        background: Color.danger;
+        hover: Config.profile-name == "PROFILE_NAME_DEFAULT" ? Color.danger : Color.danger-accent;
+
+        clicked => {
+            Config.delete-profile()
+        }
+    }
 }
 
-component AdvancedContainer inherits Rectangle { }
+component AdvancedContainer inherits Rectangle {
+    Field {
+        x: Dimensions.huge;
+        y: author.y;
+        width: parent.width - author.width - self.x * 3;
+        name: "Logitech settings location";
+        value: Config.settings-path;
+        input-type: FieldInputType.selectable;
+
+        double-clicked => {
+            Config.select-settings()
+        }
+    }
+
+    Text {
+        x: Dimensions.huge;
+        y: restart.y - restart.height;
+        text: "DANGER ZONE";
+        color: Color.danger;
+        font-size: Dimensions.font-big;
+        font-weight: Dimensions.font-bold;
+    }
+
+    restart := ImageButton {
+        x: Dimensions.huge;
+        y: delete.y - delete.height - Dimensions.huge;
+        height: 28px;
+        icon: @image-url("../assets/refresh.png");
+        text: "Restart LGHUB";
+
+        corner-radius: Dimensions.small;
+        font-size: Dimensions.font-big;
+        font-weight: Dimensions.font-bold;
+        background: Color.primary;
+        hover: Color.primary-accent;
+
+        clicked => {
+            Config.restart-lghub()
+        }
+    }
+
+    delete := ImageButton {
+        x: Dimensions.huge;
+        y: parent.height - self.height - Dimensions.huge;
+        height: 28px;
+        icon: @image-url("../assets/delete.png");
+        text: "Delete Application";
+
+        corner-radius: Dimensions.small;
+        font-size: Dimensions.font-big;
+        font-weight: Dimensions.font-bold;
+        background: Color.danger;
+        hover: Config.active-application.type == ApplicationType.custom ? Color.danger-accent : Color.danger;
+
+        clicked => {
+            if (Config.active-application.type == ApplicationType.custom) {
+                Config.delete-application();
+            }
+        }
+    }
+
+    author := Text {
+        x: parent.width - self.width - Dimensions.huge;
+        y: self.height;
+
+        text: "Made by Lee";
+        color: Color.brand;
+        font-size: Dimensions.font-big;
+        font-weight: Dimensions.font-bold;
+    }
+
+    version := Text {
+        x: parent.width - self.width - Dimensions.huge;
+        y: author.height + author.y;
+
+        text: "v1.0.0";
+        color: Color.tertiary;
+        font-size: Dimensions.font-big;
+        font-weight: Dimensions.font-bold;
+    }
+
+    github := ImageButton {
+        x: parent.width - self.width - Dimensions.huge;
+        y: version.height + version.y + Dimensions.medium;
+        height: 28px;
+
+        text: "GitHub";
+        icon: @image-url("../assets/github.png");
+
+        corner-radius: Dimensions.small;
+        font-size: Dimensions.font-big;
+        font-weight: Dimensions.font-bold;
+        background: Color.foreground;
+        hover: Color.primary;
+
+        clicked => {
+            Config.open-github()
+        }
+    }
+
+    AboutSlint {
+        x: parent.width - self.width - Dimensions.small;
+        y: github.height + github.y + Dimensions.huge;
+        width: 128px;
+        height: 128px;
+    }
+}
 
 export component ApplicationEditor inherits Rectangle {
-    private property <string> active-tab: tabs[1];
+    private property <string> active-tab: tabs[0];
     private property <[string]> tabs: ["Details", "Profiles", "Advanced"];
 
     background-item := Rectangle {
