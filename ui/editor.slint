@@ -280,16 +280,20 @@ component ProfileViewerContainer inherits Rectangle {
             name-text := Text {
                 x: Dimensions.large;
                 y: Dimensions.large;
+                width: parent.width - self.x * 4;
                 text: profile.name;
                 color: Color.foreground;
                 font-size: Dimensions.font-big + Dimensions.small;
+                overflow: elide;
             }
 
             Text {
                 x: Dimensions.large;
                 y: Dimensions.huge + name-text.height;
+                width: parent.width - self.x * 2;
                 text: profile.id;
                 color: Color.primary;
+                overflow: elide;
             }
 
             if profile.active: Rectangle {
@@ -370,8 +374,10 @@ component ProfilesContainer inherits Rectangle {
 
                 Text {
                     x: dropdown.left-padding;
+                    width: parent.width - self.x * 2;
                     text: application.name;
                     color: Color.foreground;
+                    overflow: elide;
                 }
 
                 clicked => {

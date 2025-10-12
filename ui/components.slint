@@ -79,8 +79,10 @@ export component DropdownMenu inherits Rectangle {
 
     text := Text {
         x: image.width + Dimensions.small * 2;
+        width: parent.width - self.x * 2;
         text: selected;
         color: Color.foreground;
+        overflow: elide;
     }
 
     image := Image {
