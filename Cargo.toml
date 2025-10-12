@@ -8,10 +8,10 @@ build = "build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-slint = "1.12.1"
+slint = "1.13.1"
 
 [build-dependencies]
-slint-build = "1.12.1"
+slint-build = "1.13.1"
 winres = "0.1.12"
 
 [[bin]]
