@@ -1,7 +1,7 @@
 // Allow binary to be called GProfiles
 #![allow(non_snake_case)]
 // Hide terminal window
-#![windows_subsystem = "windows"]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 slint::include_modules!();
 
