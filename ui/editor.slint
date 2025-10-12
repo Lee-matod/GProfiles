@@ -329,7 +329,7 @@ component ProfilesContainer inherits Rectangle {
         input-type: Config.profile-name == "PROFILE_NAME_DEFAULT" ? FieldInputType.readable : FieldInputType.editable;
 
         accepted(text) => {
-            Config.name-profile(text);
+            Config.name-profile(text)
         }
     }
 
@@ -397,7 +397,7 @@ component ProfilesContainer inherits Rectangle {
         hover: Color.primary-accent;
 
         clicked => {
-            Config.duplicate-profile(root.duplicate-application);
+            Config.duplicate-profile(root.duplicate-application)
         }
     }
 

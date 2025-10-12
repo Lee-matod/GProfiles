@@ -96,8 +96,8 @@ export component DropdownMenu inherits Rectangle {
 }
 
 export component HoverableComponent inherits Rectangle {
-    callback clicked();
-    callback double-clicked();
+    callback clicked <=> area.clicked;
+    callback double-clicked <=> area.double-clicked;
 
     in property <color> hover;
     in property <color> default;
@@ -106,15 +106,7 @@ export component HoverableComponent inherits Rectangle {
     animate background { duration: duration; }
 
     background: area.has-hover ? hover : default;
-    area := TouchArea {
-        clicked => {
-            root.clicked()
-        };
-
-        double-clicked => {
-            root.double-clicked()
-        };
-    }
+    area := TouchArea {}
 }
 
 export component Title inherits Text {
@@ -125,8 +117,8 @@ export component Title inherits Text {
 }
 
 export component ImageButton {
-    callback clicked();
-    callback double-clicked();
+    callback clicked <=> comp.clicked;
+    callback double-clicked <=> comp.double-clicked;
 
     in property <image> icon;
     in property <string> text;
@@ -141,18 +133,10 @@ export component ImageButton {
 
     width: txt.width + img.width + Dimensions.large;
 
-    HoverableComponent {
+    comp := HoverableComponent {
         default: root.background;
         hover: root.hover;
         border-radius: root.corner-radius;
-
-        clicked() => {
-            root.clicked()
-        }
-
-        double-clicked => {
-            root.double-clicked()
-        }
     }
 
     img := Image {
@@ -170,9 +154,9 @@ export component ImageButton {
 }
 
 export component Field inherits Rectangle {
-    callback clicked();
-    callback double-clicked();
-    callback accepted(string);
+    callback clicked <=> area.clicked;
+    callback double-clicked <=> area.double-clicked;
+    callback accepted <=> field.accepted;
 
     in property <string> name;
     in property <string> placeholder;
@@ -187,7 +171,7 @@ export component Field inherits Rectangle {
         text: name;
     }
 
-    TouchArea {
+    area := TouchArea {
         x: 0;
         y: title.height;
         width: parent.width;
@@ -202,18 +186,6 @@ export component Field inherits Rectangle {
             placeholder-text: root.placeholder;
             read-only: input-type == FieldInputType.selectable;
             enabled: input-type != FieldInputType.readable;
-
-            accepted(text) => {
-                root.accepted(text)
-            }
-        }
-
-        clicked => {
-            root.clicked()
-        }
-
-        double-clicked => {
-            root.double-clicked()
         }
     }
 }
