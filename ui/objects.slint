@@ -86,6 +86,7 @@ export global Config {
     pure callback input-clicked(Keybind, string);
     pure callback output-clicked(Keybind, string);
     pure callback delete-keybind(Keybind);
+    pure callback keybind-mapper(string) -> string;
 
     // Profiles
     pure callback select-profile(Profile);
