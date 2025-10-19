@@ -1,6 +1,6 @@
 export enum ApplicationType { custom, installed, desktop }
 
-export struct Application {
+export struct ApplicationModel {
     id: string,
     name: string,
     icon: image,
@@ -9,38 +9,37 @@ export struct Application {
     type: ApplicationType,
 }
 
-export struct Process {
+export struct ProcessModel {
     name: string,
     executable: string,
     icon: image,
 }
 
-export struct Profile {
+export struct ProfileModel {
     name: string,
     id: string,
     active: bool,
     application: string,
 }
 
-export struct Keybind {
-    application: string,
+export struct KeybindModel {
     input: string,
     output: string,
     vk-input: int,
     vk-output: int,
 }
 
-export global Config {
-    in-out property <Application> active-application;
-    in-out property <Profile> active-profile;
+export global Singleton {
+    in-out property <ApplicationModel> active-application;
+    in-out property <ProfileModel> active-profile;
 
-    in-out property <[Application]> applications: [
+    in-out property <[ApplicationModel]> applications: [
         { name: "Game 1", icon: @image-url("../assets/broken_image.png") },
         { name: "Game 2", icon: @image-url("../assets/broken_image.png") },
         { name: "Game 3", icon: @image-url("../assets/broken_image.png") }
     ];
-    in-out property <[Keybind]> keybinds: [{ input: "a", output: "b" }, { input: "c", output: "d" }, { input: "e", output: "g" }];
-    in-out property <[Process]> processes: [
+    in-out property <[KeybindModel]> keybinds: [{ input: "a", output: "b" }, { input: "c", output: "d" }, { input: "e", output: "g" }];
+    in-out property <[ProcessModel]> processes: [
         {
             name: "one",
             executable: "/a/b/c.exe",
@@ -57,7 +56,7 @@ export global Config {
             icon: @image-url("../assets/broken_image.png")
         }
     ];
-    in-out property <[Profile]> profiles: [
+    in-out property <[ProfileModel]> profiles: [
         { name: "one", active: true, id: "1234-1234-1234" },
         { name: "two", id: "1234-1234-1234" },
         { name: "three", id: "1234-1234-1234" }
@@ -71,11 +70,11 @@ export global Config {
     in-out property <string> settings-path;
 
     // Processes
-    pure callback add-process(Process);
+    pure callback add-process(ProcessModel);
 
     // Applications
     pure callback create-application();
-    pure callback select-application(Application);
+    pure callback select-application(ApplicationModel);
     pure callback change-name(string);
     pure callback change-image();
     pure callback change-executable();
@@ -83,14 +82,14 @@ export global Config {
 
     // Keybinds
     pure callback create-keybind();
-    pure callback input-clicked(Keybind, string);
-    pure callback output-clicked(Keybind, string);
-    pure callback delete-keybind(Keybind);
+    pure callback input-clicked(KeybindModel, string);
+    pure callback output-clicked(KeybindModel, string);
+    pure callback delete-keybind(KeybindModel);
     pure callback keybind-mapper(string) -> string;
 
     // Profiles
-    pure callback select-profile(Profile);
-    pure callback duplicate-profile(Application);
+    pure callback select-profile(ProfileModel);
+    pure callback duplicate-profile(ApplicationModel);
     pure callback name-profile(string);
     pure callback delete-profile();
     

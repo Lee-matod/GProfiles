@@ -1,9 +1,9 @@
-import { Application, ApplicationType, Color, Config, Dimensions } from "objects.slint";
+import { ApplicationModel, ApplicationType, Color, Dimensions, Singleton } from "objects.slint";
 import { ScrollView } from "std-widgets.slint";
 
 export component ApplicationCard inherits Rectangle {
-    callback clicked(Application);
-    in property <Application> application;
+    callback clicked(ApplicationModel);
+    in property <ApplicationModel> application;
 
     width: 164px;
     height: 200px;
@@ -47,7 +47,7 @@ export component ApplicationCard inherits Rectangle {
     // We create another rectangle for the outline to ensure that it is drawn *over* the image
     Rectangle {
         border-radius: Dimensions.medium;
-        border-width: area.has-hover || application == Config.active-application ? Dimensions.small : 0px;
+        border-width: area.has-hover || application == Singleton.active-application ? Dimensions.small : 0px;
         border-color: Color.brand;
 
         animate border-width { duration: 150ms; }
@@ -55,17 +55,17 @@ export component ApplicationCard inherits Rectangle {
 }
 
 export component ApplicationContainer inherits ScrollView {
-    viewport-width: 180px * Config.applications.length + Dimensions.huge * 3;
+    viewport-width: 180px * Singleton.applications.length + Dimensions.huge * 3;
     viewport-height: 200px;
     horizontal-scrollbar-policy: always-off;
     mouse-drag-pan-enabled: true;
 
-    for i in Config.applications.length: ApplicationCard {
+    for i in Singleton.applications.length: ApplicationCard {
         x: i * 180px;
-        application: Config.applications[i];
+        application: Singleton.applications[i];
 
         clicked(application) => {
-            Config.select-application(application);
+            Singleton.select-application(application);
         }
     }
 }

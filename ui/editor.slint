@@ -1,4 +1,4 @@
-import { Application, ApplicationType, Color, Config, Dimensions, Keybind, Profile } from "objects.slint";
+import { ApplicationModel, ApplicationType, Color, Dimensions, KeybindModel, ProfileModel, Singleton } from "objects.slint";
 import { CollapsableContainer, DropdownMenu, Field, FieldInputType, HoverableComponent, ImageButton } from "components.slint";
 import { AboutSlint, Button, ScrollView } from "std-widgets.slint";
 
@@ -49,12 +49,12 @@ component KeybindsContainer inherits Rectangle {
         private property <physical-length> keybind-height: 40px;
 
         viewport-width: parent.width;
-        viewport-height: (Config.keybinds.length + 1) * (self.keybind-height + Dimensions.medium) + Dimensions.medium;
+        viewport-height: (Singleton.keybinds.length + 1) * (self.keybind-height + Dimensions.medium) + Dimensions.medium;
         vertical-scrollbar-policy: always-off;
         mouse-drag-pan-enabled: true;
 
         HoverableComponent {
-            y: Config.keybinds.length * (keybind-height + Dimensions.medium) + Dimensions.medium;
+            y: Singleton.keybinds.length * (keybind-height + Dimensions.medium) + Dimensions.medium;
             width: parent.width - Dimensions.huge;
             height: keybind-height;
 
@@ -80,12 +80,12 @@ component KeybindsContainer inherits Rectangle {
             }
 
             clicked => {
-                Config.create-keybind();
+                Singleton.create-keybind();
             }
         }
 
-        for i in Config.keybinds.length: Rectangle {
-            private property <Keybind> keybind: Config.keybinds[i];
+        for i in Singleton.keybinds.length: Rectangle {
+            private property <KeybindModel> keybind: Singleton.keybinds[i];
 
             y: i * (keybind-height + Dimensions.medium) + Dimensions.medium;
             width: parent.width - Dimensions.huge;
@@ -114,8 +114,8 @@ component KeybindsContainer inherits Rectangle {
                     }
 
                     key-pressed(event) => {
-                        let char = Config.keybind-mapper(event.text);
-                        Config.input-clicked(keybind, char);
+                        let char = Singleton.keybind-mapper(event.text);
+                        Singleton.input-clicked(keybind, char);
                         parent.key = char;
                         input-scope.clear-focus();
                         accept
@@ -162,8 +162,8 @@ component KeybindsContainer inherits Rectangle {
                     }
 
                     key-pressed(event) => {
-                        let char = Config.keybind-mapper(event.text);
-                        Config.output-clicked(keybind, char);
+                        let char = Singleton.keybind-mapper(event.text);
+                        Singleton.output-clicked(keybind, char);
                         parent.key = char;
                         output-scope.clear-focus();
                         accept
@@ -185,7 +185,7 @@ component KeybindsContainer inherits Rectangle {
                 }
 
                 clicked => {
-                    Config.delete-keybind(keybind);
+                    Singleton.delete-keybind(keybind);
                 }
             }
         }
@@ -198,11 +198,11 @@ component DetailsContainer inherits Rectangle {
         y: Dimensions.large;
         width: parent.width - self.x - keybinds.width - keybinds.y - Dimensions.huge;
         name: "Name";
-        value <=> Config.name;
-        input-type: Config.name == "APPLICATION_NAME_DESKTOP" ? FieldInputType.readable : FieldInputType.editable;
+        value <=> Singleton.name;
+        input-type: Singleton.name == "APPLICATION_NAME_DESKTOP" ? FieldInputType.readable : FieldInputType.editable;
 
         accepted(text) => {
-            Config.change-name(text)
+            Singleton.change-name(text)
         }
     }
 
@@ -211,17 +211,17 @@ component DetailsContainer inherits Rectangle {
         y: parent.height / 2 - self.height + Dimensions.large * 2;
         width: parent.width - self.x - keybinds.width - keybinds.y - Dimensions.huge;
         name: "Image";
-        value <=> Config.image;
-        input-type: Config.active-application.type == ApplicationType.custom ? FieldInputType.selectable : FieldInputType.readable;
+        value <=> Singleton.image;
+        input-type: Singleton.active-application.type == ApplicationType.custom ? FieldInputType.selectable : FieldInputType.readable;
 
         clicked => {
             if (self.input-type == FieldInputType.readable) {
-                Config.change-image()
+                Singleton.change-image()
             }
         }
 
         double-clicked => {
-            Config.change-image()
+            Singleton.change-image()
         }
     }
 
@@ -230,17 +230,17 @@ component DetailsContainer inherits Rectangle {
         y: parent.height - self.height - Dimensions.huge;
         width: parent.width - self.x - keybinds.width - keybinds.y - Dimensions.huge;
         name: "Executable";
-        value <=> Config.executable;
-        input-type: Config.active-application.type == ApplicationType.custom ? FieldInputType.selectable : FieldInputType.readable;
+        value <=> Singleton.executable;
+        input-type: Singleton.active-application.type == ApplicationType.custom ? FieldInputType.selectable : FieldInputType.readable;
 
         clicked => {
             if (self.input-type == FieldInputType.readable) {
-                Config.change-executable()
+                Singleton.change-executable()
             }
         }
 
         double-clicked => {
-            Config.change-executable()
+            Singleton.change-executable()
         }
     }
 
@@ -260,12 +260,12 @@ component ProfileViewerContainer inherits Rectangle {
         private property <physical-length> profile-height: 64px;
 
         viewport-width: parent.width;
-        viewport-height: (Config.profiles.length + 1) * (self.profile-height - Dimensions.medium);
+        viewport-height: (Singleton.profiles.length + 1) * (self.profile-height - Dimensions.medium);
         vertical-scrollbar-policy: always-off;
         mouse-drag-pan-enabled: true;
 
-        for i in Config.profiles.length: HoverableComponent {
-            private property <Profile> profile: Config.profiles[i];
+        for i in Singleton.profiles.length: HoverableComponent {
+            private property <ProfileModel> profile: Singleton.profiles[i];
 
             y: i * (profile-height + Dimensions.medium) + Dimensions.medium;
             width: parent.width - Dimensions.huge;
@@ -275,7 +275,7 @@ component ProfileViewerContainer inherits Rectangle {
             hover: Color.tertiary-accent;
             border-radius: Dimensions.medium;
             border-width: Dimensions.small;
-            border-color: profile.id == Config.profile-id ? Color.brand : self.background;
+            border-color: profile.id == Singleton.profile-id ? Color.brand : self.background;
 
             name-text := Text {
                 x: Dimensions.large;
@@ -306,14 +306,14 @@ component ProfileViewerContainer inherits Rectangle {
             }
 
             clicked => {
-                Config.select-profile(profile)
+                Singleton.select-profile(profile)
             }
         }
     }
 }
 
 component ProfilesContainer inherits Rectangle {
-    private property <Application> duplicate-application: Config.active-application;
+    private property <ApplicationModel> duplicate-application: Singleton.active-application;
     private property <physical-length> item-height: Dimensions.large * 2;
 
     viewer := ProfileViewerContainer {
@@ -329,11 +329,11 @@ component ProfilesContainer inherits Rectangle {
         width: parent.width - self.x - Dimensions.huge;
 
         name: "Name";
-        value <=> Config.profile-name;
-        input-type: Config.profile-name == "PROFILE_NAME_DEFAULT" ? FieldInputType.readable : FieldInputType.editable;
+        value <=> Singleton.profile-name;
+        input-type: Singleton.profile-name == "PROFILE_NAME_DEFAULT" ? FieldInputType.readable : FieldInputType.editable;
 
         accepted(text) => {
-            Config.name-profile(text)
+            Singleton.name-profile(text)
         }
     }
 
@@ -357,11 +357,11 @@ component ProfilesContainer inherits Rectangle {
             width: parent.width;
             height: parent.height;
             viewport-width: parent.width;
-            viewport-height: Config.applications.length * root.item-height;
+            viewport-height: Singleton.applications.length * root.item-height;
             vertical-scrollbar-policy: always-off;
 
-            for i in Config.applications.length: HoverableComponent {
-                private property <Application> application: Config.applications[i];
+            for i in Singleton.applications.length: HoverableComponent {
+                private property <ApplicationModel> application: Singleton.applications[i];
 
                 y: i * root.item-height;
                 width: parent.width;
@@ -369,8 +369,8 @@ component ProfilesContainer inherits Rectangle {
 
                 default: Color.background;
                 hover: Color.background-accent;
-                border-bottom-left-radius: i == Config.applications.length - 1 ? Dimensions.medium : 0;
-                border-bottom-right-radius: i == Config.applications.length - 1 ? Dimensions.medium : 0;
+                border-bottom-left-radius: i == Singleton.applications.length - 1 ? Dimensions.medium : 0;
+                border-bottom-right-radius: i == Singleton.applications.length - 1 ? Dimensions.medium : 0;
 
                 Text {
                     x: dropdown.left-padding;
@@ -403,7 +403,7 @@ component ProfilesContainer inherits Rectangle {
         hover: Color.primary-accent;
 
         clicked => {
-            Config.duplicate-profile(root.duplicate-application)
+            Singleton.duplicate-profile(root.duplicate-application)
         }
     }
 
@@ -418,10 +418,10 @@ component ProfilesContainer inherits Rectangle {
         font-size: Dimensions.font-big;
         font-weight: Dimensions.font-bold;
         background: Color.danger;
-        hover: Config.profile-name == "PROFILE_NAME_DEFAULT" ? Color.danger : Color.danger-accent;
+        hover: Singleton.profile-name == "PROFILE_NAME_DEFAULT" ? Color.danger : Color.danger-accent;
 
         clicked => {
-            Config.delete-profile()
+            Singleton.delete-profile()
         }
     }
 }
@@ -432,11 +432,11 @@ component AdvancedContainer inherits Rectangle {
         y: author.y;
         width: parent.width - author.width - self.x * 3;
         name: "Logitech settings location";
-        value: Config.settings-path;
+        value: Singleton.settings-path;
         input-type: FieldInputType.selectable;
 
         double-clicked => {
-            Config.select-settings()
+            Singleton.select-settings()
         }
     }
 
@@ -463,7 +463,7 @@ component AdvancedContainer inherits Rectangle {
         hover: Color.primary-accent;
 
         clicked => {
-            Config.restart-lghub()
+            Singleton.restart-lghub()
         }
     }
 
@@ -478,11 +478,11 @@ component AdvancedContainer inherits Rectangle {
         font-size: Dimensions.font-big;
         font-weight: Dimensions.font-bold;
         background: Color.danger;
-        hover: Config.active-application.type == ApplicationType.custom ? Color.danger-accent : Color.danger;
+        hover: Singleton.active-application.type == ApplicationType.custom ? Color.danger-accent : Color.danger;
 
         clicked => {
-            if (Config.active-application.type == ApplicationType.custom) {
-                Config.delete-application();
+            if (Singleton.active-application.type == ApplicationType.custom) {
+                Singleton.delete-application();
             }
         }
     }
@@ -522,7 +522,7 @@ component AdvancedContainer inherits Rectangle {
         hover: Color.primary;
 
         clicked => {
-            Config.open-github()
+            Singleton.open-github()
         }
     }
 

@@ -108,7 +108,7 @@ export component HoverableComponent inherits Rectangle {
     animate background { duration: duration; }
 
     background: area.has-hover ? hover : default;
-    area := TouchArea {}
+    area := TouchArea { }
 }
 
 export component Title inherits Text {

@@ -1,9 +1,9 @@
 import { LineEdit, ScrollView } from "std-widgets.slint";
 import { HoverableComponent, Title } from "components.slint";
-import { Color, Config, Dimensions, Process } from "objects.slint";
+import { Color, Dimensions, ProcessModel, Singleton } from "objects.slint";
 
 export component ProcessView inherits HoverableComponent {
-    in property <Process> process;
+    in property <ProcessModel> process;
 
     border-radius: Dimensions.small;
     hover: Color.secondary;
@@ -59,18 +59,18 @@ export component ProcessContainer inherits Rectangle {
         width: search-box.width;
         height: parent.height - search-box.height - Dimensions.large * 3;
 
-        viewport-height: Config.processes.length * (root.process-height + process-padding);
+        viewport-height: Singleton.processes.length * (root.process-height + process-padding);
         horizontal-scrollbar-policy: always-off;
         mouse-drag-pan-enabled: true;
 
-        for i in Config.processes.length: ProcessView {
+        for i in Singleton.processes.length: ProcessView {
             y: i * (root.process-height + process-padding);
             height: process-height;
             width: parent.width - Dimensions.large;
-            process: Config.processes[i];
+            process: Singleton.processes[i];
 
             clicked => {
-                Config.add-process(self.process);
+                Singleton.add-process(self.process);
             }
         }
     }

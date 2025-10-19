@@ -1,8 +1,10 @@
-import { Color, Config, Dimensions } from "objects.slint";
+import { Color, Dimensions, Singleton } from "objects.slint";
 import { ProcessContainer } from "processes.slint";
 import { Title } from "components.slint";
 import { ApplicationCard, ApplicationContainer } from "applications.slint";
 import { ApplicationEditor } from "editor.slint";
+
+export { Color, Singleton }
 
 export component App inherits Window {
     title: "GProfiles";
@@ -28,7 +30,7 @@ export component App inherits Window {
         };
 
         clicked => {
-            Config.create-application();
+            Singleton.create-application();
         }
     }
 
