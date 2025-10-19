@@ -21,7 +21,7 @@ export component ApplicationCard inherits Rectangle {
     Text {
         y: parent.height * 3 / 4;
         width: parent.width - Dimensions.huge;
-        text: application.type == ApplicationType.installed ? "" : application.name;
+        text: application.type == ApplicationType.installed ? "" : (application.name != "APPLICATION_NAME_DESKTOP" ? application.name : "Desktop");
         horizontal-alignment: center;
         color: Color.foreground;
         font-size: Dimensions.font-big;
