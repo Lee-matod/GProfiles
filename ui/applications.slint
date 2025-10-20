@@ -18,10 +18,17 @@ export component ApplicationCard inherits Rectangle {
         }
     }
 
+    function get-display-name() -> string {
+        if application.type == ApplicationType.installed && application.has-icon {
+            return "";
+        }
+        return application.display-name.is-empty ? application.name : application.display-name;
+    }
+
     Text {
         y: parent.height * 3 / 4;
         width: parent.width - Dimensions.huge;
-        text: application.type == ApplicationType.installed ? "" : (application.name != "APPLICATION_NAME_DESKTOP" ? application.name : "Desktop");
+        text: root.get-display-name();
         horizontal-alignment: center;
         color: Color.foreground;
         font-size: Dimensions.font-big;
@@ -29,10 +36,10 @@ export component ApplicationCard inherits Rectangle {
     }
 
     Image {
-        width: application.type == ApplicationType.installed ? parent.width : 48px;
-        height: application.type == ApplicationType.installed ? parent.height : 48px;
+        width: application.type == ApplicationType.installed && application.has-icon ? parent.width : 48px;
+        height: application.type == ApplicationType.installed && application.has-icon ? parent.height : 48px;
         source: application.icon;
-        colorize: application.executable.is-empty ? Color.foreground : #00000000;
+        colorize: application.type == ApplicationType.installed && application.executable.is-empty ? #00000000 : Color.foreground;
     }
 
     if application.executable == "" && application.type == ApplicationType.installed: Rectangle {

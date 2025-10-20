@@ -3,10 +3,12 @@ export enum ApplicationType { custom, installed, desktop }
 export struct ApplicationModel {
     id: string,
     name: string,
+    display-name: string,
     icon: image,
     image-path: string,
     executable: string,
     type: ApplicationType,
+    has-icon: bool,
 }
 
 export struct ProcessModel {
