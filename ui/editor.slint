@@ -281,7 +281,7 @@ component ProfileViewerContainer inherits Rectangle {
                 x: Dimensions.large;
                 y: Dimensions.large;
                 width: parent.width - self.x * 4;
-                text: profile.name;
+                text: profile.display-name.is-empty ? profile.name : profile.display-name;
                 color: Color.foreground;
                 font-size: Dimensions.font-big + Dimensions.small;
                 overflow: elide;
@@ -342,7 +342,7 @@ component ProfilesContainer inherits Rectangle {
         y: name.height + name.y + Dimensions.huge + Dimensions.small;
         width: parent.width - self.x - Dimensions.huge * 1.5 - duplicate.width;
         height: root.item-height;
-        selected: duplicate-application.name;
+        selected: duplicate-application.display-name.is-empty ? duplicate-application.name : duplicate-application.display-name;
     }
 
     Rectangle {
@@ -353,7 +353,6 @@ component ProfilesContainer inherits Rectangle {
         animate height { duration: 150ms; }
 
         ScrollView {
-
             width: parent.width;
             height: parent.height;
             viewport-width: parent.width;
@@ -375,7 +374,7 @@ component ProfilesContainer inherits Rectangle {
                 Text {
                     x: dropdown.left-padding;
                     width: parent.width - self.x * 2;
-                    text: application.name;
+                    text: application.display-name.is-empty ? application.name : application.display-name;
                     color: Color.foreground;
                     overflow: elide;
                 }
