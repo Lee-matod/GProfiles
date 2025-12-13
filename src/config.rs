@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     env,
     ffi::OsString,
-    fs, path,
+    fs, io, path,
     sync::{OnceLock, RwLock},
 };
 
@@ -11,7 +11,7 @@ use crate::{
         gprofiles::{GProfilesData, Keybind},
         logitech::{Application, LogitechData, Profile},
     },
-    utils::{parse_json, APPLICATION_NAME_DESKTOP},
+    utils::{APPLICATION_NAME_DESKTOP, parse_json},
 };
 
 pub static CONFIG: OnceLock<RwLock<Config>> = OnceLock::new();
@@ -20,32 +20,45 @@ pub fn get_config() -> &'static RwLock<Config> {
     CONFIG.get_or_init(|| RwLock::new(Config::new()))
 }
 
-fn get_gprofiles_path() -> path::PathBuf {
-    let parent_dir: OsString = if cfg!(target_os = "windows") {
+fn get_default_storage(identifier: &str, data: Option<&str>) -> io::Result<path::PathBuf> {
+    let parent_dir: Option<OsString> = if cfg!(target_os = "windows") {
         env::var_os("LOCALAPPDATA")
     } else if cfg!(target_os = "linux") {
         env::var_os("XDG_CONFIG_HOME")
     } else {
-        None
+        return Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "OS not supported.",
+        ));
+    };
+    if parent_dir.is_none() {
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Configuration directory not set correctly.",
+        ));
     }
-    .expect("Configuration directory not found.");
-
-    let parent = path::Path::new(&parent_dir);
+    let parent = path::PathBuf::from(&parent_dir.unwrap());
     if !parent.exists() {
-        panic!("Configuration directory does not exist.");
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Configuration directory does not exist.",
+        ));
     }
 
-    let config_dir = parent.join("GProfiles");
-    if !config_dir.exists() {
-        fs::create_dir(&config_dir).expect("Failed to create configuration directory.");
+    let target = parent.join(identifier);
+    if let Some(obj) = data {
+        if !target.exists() {
+            fs::create_dir(&target)?;
+        }
+        let items: Vec<&str> = obj.split(" ").collect();
+        let (name, data) = (items[0], &items[1..]);
+        let child = target.join(name);
+        if !child.exists() {
+            fs::write(&child, data.join(" "))?;
+        }
+        return Ok(child);
     }
-
-    let config = config_dir.join("settings.json");
-    if !config.exists() {
-        fs::write(&config, "{}").expect("Failed to create default configuration file.");
-    }
-
-    config
+    Ok(target)
 }
 
 #[derive(Debug)]
@@ -53,35 +66,31 @@ pub struct Config {
     applications: Vec<Application>,
     profiles: Vec<Profile>,
     keybinds: HashMap<String, Vec<Keybind>>,
-    gprofiles_path: path::PathBuf,
-    lghub_location: Option<String>,
+    gprofiles_settings: path::PathBuf,
+    lghub_location: path::PathBuf,
 }
 
 impl Config {
     pub fn new() -> Self {
-        let gprofiles_path = get_gprofiles_path();
-        let gprofiles_data: GProfilesData = parse_json(&gprofiles_path);
+        let gprofiles_settings =
+            get_default_storage("GProfiles", Some("settings.json {}")).unwrap();
+        let gprofiles_data: GProfilesData = parse_json(&gprofiles_settings);
 
-        let applications: Vec<Application>;
-        let profiles: Vec<Profile>;
-        let lghub_location: Option<String>;
-        let keybinds = gprofiles_data.keybinds.unwrap_or_default();
-        if gprofiles_data.settings.is_none() {
-            applications = vec![];
-            profiles = vec![];
-            lghub_location = None;
+        let lghub_location = if gprofiles_data.settings.is_none() {
+            get_default_storage("LGHUB", None).unwrap()
         } else {
-            let location = gprofiles_data.settings.unwrap();
-            let logitech_data: LogitechData = parse_json(path::Path::new(&location));
-            lghub_location = Some(location);
-            applications = logitech_data.applications.applications;
-            profiles = logitech_data.profiles.profiles;
-        }
+            path::PathBuf::from(&gprofiles_data.settings.unwrap()) // safe
+        };
+        let logitech_data: LogitechData = parse_json(&lghub_location);
+
+        let applications = logitech_data.applications.applications;
+        let profiles = logitech_data.profiles.profiles;
+        let keybinds = gprofiles_data.keybinds.unwrap_or_default();
 
         Self {
             applications,
             profiles,
-            gprofiles_path,
+            gprofiles_settings,
             lghub_location,
             keybinds,
         }
@@ -131,16 +140,8 @@ impl Config {
         profiles
     }
 
-    pub fn get_lghub_path(&self) -> Option<&path::Path> {
-        if let Some(s) = &self.lghub_location {
-            Some(path::Path::new(s))
-        } else {
-            None
-        }
-    }
-
     pub fn get_icon_cache(&self) -> Option<path::PathBuf> {
-        Some(self.get_lghub_path()?.join("icon_cache"))
+        Some(self.lghub_location.join("icon_cache"))
     }
 
     fn get_application_index(&self, id: &String) -> Option<usize> {
