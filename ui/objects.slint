@@ -33,8 +33,9 @@ export struct KeybindModel {
 }
 
 export global Singleton {
-    in-out property <ApplicationModel> active-application;
-    in-out property <ProfileModel> active-profile;
+    in-out property <string> active-application-id;
+    in-out property <ApplicationType> active-application-type;
+    in-out property <string> active-profile-id;
 
     in-out property <[ApplicationModel]> applications: [
         { name: "Game 1", icon: @image-url("../assets/broken_image.png") },
@@ -70,6 +71,8 @@ export global Singleton {
     in-out property <string> executable;
     in-out property <string> profile-name;
     in-out property <string> profile-id;
+    in-out property <string> profile-app-name;
+    in-out property <string> profile-app-id;
     in-out property <string> settings-path;
 
     // Processes
@@ -92,7 +95,7 @@ export global Singleton {
 
     // Profiles
     pure callback select-profile(ProfileModel);
-    pure callback duplicate-profile(ApplicationModel);
+    pure callback duplicate-profile(string);
     pure callback name-profile(string);
     pure callback delete-profile();
     

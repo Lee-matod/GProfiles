@@ -1,5 +1,20 @@
-import { ApplicationModel, ApplicationType, Color, Dimensions, KeybindModel, ProfileModel, Singleton } from "objects.slint";
-import { CollapsableContainer, DropdownMenu, Field, FieldInputType, HoverableComponent, ImageButton } from "components.slint";
+import {
+    ApplicationModel,
+    ApplicationType,
+    Color,
+    Dimensions,
+    KeybindModel,
+    ProfileModel,
+    Singleton,
+} from "objects.slint";
+import {
+    CollapsableContainer,
+    DropdownMenu,
+    Field,
+    FieldInputType,
+    HoverableComponent,
+    ImageButton,
+} from "components.slint";
 import { AboutSlint, Button, ScrollView } from "std-widgets.slint";
 
 component Tab inherits Rectangle {
@@ -212,7 +227,7 @@ component DetailsContainer inherits Rectangle {
         width: parent.width - self.x - keybinds.width - keybinds.y - Dimensions.huge;
         name: "Image";
         value <=> Singleton.image;
-        input-type: Singleton.active-application.type == ApplicationType.custom ? FieldInputType.selectable : FieldInputType.readable;
+        input-type: Singleton.active-application-type == ApplicationType.custom ? FieldInputType.selectable : FieldInputType.readable;
 
         clicked => {
             if (self.input-type == FieldInputType.readable) {
@@ -231,7 +246,7 @@ component DetailsContainer inherits Rectangle {
         width: parent.width - self.x - keybinds.width - keybinds.y - Dimensions.huge;
         name: "Executable";
         value <=> Singleton.executable;
-        input-type: Singleton.active-application.type == ApplicationType.custom ? FieldInputType.selectable : FieldInputType.readable;
+        input-type: Singleton.active-application-type == ApplicationType.custom ? FieldInputType.selectable : FieldInputType.readable;
 
         clicked => {
             if (self.input-type == FieldInputType.readable) {
@@ -313,7 +328,6 @@ component ProfileViewerContainer inherits Rectangle {
 }
 
 component ProfilesContainer inherits Rectangle {
-    private property <ApplicationModel> duplicate-application: Singleton.active-application;
     private property <physical-length> item-height: Dimensions.large * 2;
 
     viewer := ProfileViewerContainer {
@@ -342,7 +356,7 @@ component ProfilesContainer inherits Rectangle {
         y: name.height + name.y + Dimensions.huge + Dimensions.small;
         width: parent.width - self.x - Dimensions.huge * 1.5 - duplicate.width;
         height: root.item-height;
-        selected: duplicate-application.display-name.is-empty ? duplicate-application.name : duplicate-application.display-name;
+        selected <=> Singleton.profile-app-name;
     }
 
     Rectangle {
@@ -380,7 +394,8 @@ component ProfilesContainer inherits Rectangle {
                 }
 
                 clicked => {
-                    root.duplicate-application = application;
+                    Singleton.profile-app-name = application.display-name.is-empty ? application.name : application.display-name;
+                    Singleton.profile-app-id = application.id;
                     dropdown.hide();
                 }
             }
@@ -402,7 +417,7 @@ component ProfilesContainer inherits Rectangle {
         hover: Color.primary-accent;
 
         clicked => {
-            Singleton.duplicate-profile(root.duplicate-application)
+            Singleton.duplicate-profile(Singleton.profile-app-id)
         }
     }
 
@@ -477,10 +492,10 @@ component AdvancedContainer inherits Rectangle {
         font-size: Dimensions.font-big;
         font-weight: Dimensions.font-bold;
         background: Color.danger;
-        hover: Singleton.active-application.type == ApplicationType.custom ? Color.danger-accent : Color.danger;
+        hover: Singleton.active-application-type == ApplicationType.custom ? Color.danger-accent : Color.danger;
 
         clicked => {
-            if (Singleton.active-application.type == ApplicationType.custom) {
+            if (Singleton.active-application-type == ApplicationType.custom) {
                 Singleton.delete-application();
             }
         }

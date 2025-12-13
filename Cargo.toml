@@ -2,16 +2,23 @@
 name = "gprofiles"
 version = "1.0.0-alpha.1"
 authors = ["Lee-matod <lee.underscore.matod@gmail.com>"]
-edition = "2021"
+edition = "2024"
 build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-slint = "1.13.1"
+rfd = "0.15.4"
+image = "0.25.8"
+rusqlite = { version = "0.37.0", features = ["serde_json", "bundled"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+slint = "1.14.1"
+reqwest = { version = "0.12.24", features = ["blocking"] }
+uuid = { version = "1.18.1", features = ["v4", "fast-rng"] }
 
 [build-dependencies]
-slint-build = "1.13.1"
+slint-build = "1.14.1"
 winres = "0.1.12"
 
 [[bin]]

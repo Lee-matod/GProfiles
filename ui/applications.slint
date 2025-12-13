@@ -43,7 +43,7 @@ export component ApplicationCard inherits Rectangle {
     }
 
     if application.executable == "" && application.type == ApplicationType.installed: Rectangle {
-        background: #00000075;
+        background: #00000050;
 
         Text {
             text: "NOT INSTALLED";
@@ -54,7 +54,7 @@ export component ApplicationCard inherits Rectangle {
     // We create another rectangle for the outline to ensure that it is drawn *over* the image
     Rectangle {
         border-radius: Dimensions.medium;
-        border-width: area.has-hover || application == Singleton.active-application ? Dimensions.small : 0px;
+        border-width: area.has-hover || application.id == Singleton.active-application-id ? Dimensions.small : 0px;
         border-color: Color.brand;
 
         animate border-width { duration: 150ms; }

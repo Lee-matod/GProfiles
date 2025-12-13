@@ -20,9 +20,9 @@ export component CollapsableContainer inherits Rectangle {
         height: Dimensions.large;
         colorize: Color.secondary;
         source: @image-url("../assets/arrow.png");
-        rotation-angle: root.is-collapsed ? 0 : 90deg;
+        transform-rotation: root.is-collapsed ? 0 : 90deg;
 
-        animate rotation-angle { duration: 150ms; }
+        animate transform-rotation { duration: 150ms; }
     }
 
     text := Text {
@@ -91,9 +91,9 @@ export component DropdownMenu inherits Rectangle {
         height: Dimensions.large;
         colorize: Color.foreground;
         source: @image-url("../assets/arrow.png");
-        rotation-angle: root.is-collapsed ? 0 : 90deg;
+        transform-rotation: root.is-collapsed ? 0 : 90deg;
 
-        animate rotation-angle { duration: 150ms; }
+        animate transform-rotation { duration: 150ms; }
     }
 }
 
