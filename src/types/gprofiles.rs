@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GProfilesData {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub settings: Option<String>,
+    pub lghub: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub keybinds: Option<HashMap<String, Vec<Keybind>>>,
 }

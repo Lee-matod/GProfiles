@@ -11,7 +11,7 @@ use crate::{
         gprofiles::{GProfilesData, Keybind},
         logitech::{Application, LogitechData, Profile},
     },
-    utils::{APPLICATION_NAME_DESKTOP, parse_json},
+    utils::{APPLICATION_NAME_DESKTOP, Serializable, get_row},
 };
 
 pub static CONFIG: OnceLock<RwLock<Config>> = OnceLock::new();
@@ -74,17 +74,27 @@ impl Config {
     pub fn new() -> Self {
         let gprofiles_settings =
             get_default_storage("GProfiles", Some("settings.json {}")).unwrap();
-        let gprofiles_data: GProfilesData = parse_json(&gprofiles_settings);
+        let gprofiles_data: GProfilesData = gprofiles_settings.to_json().unwrap();
 
-        let lghub_location = if gprofiles_data.settings.is_none() {
+        let lghub_location = if gprofiles_data.lghub.is_none() {
             get_default_storage("LGHUB", None).unwrap()
         } else {
-            path::PathBuf::from(&gprofiles_data.settings.unwrap()) // safe
+            path::PathBuf::from(&gprofiles_data.lghub.unwrap()) // safe unwrap
         };
-        let logitech_data: LogitechData = parse_json(&lghub_location);
+        let lghub_settings = lghub_location.join("settings.db");
 
-        let applications = logitech_data.applications.applications;
-        let profiles = logitech_data.profiles.profiles;
+        let (applications, profiles) = if lghub_settings.exists() {
+            let data: Vec<u8> = get_row(&lghub_settings, "data", "file").unwrap();
+            let decoded = String::from_utf8(data).unwrap();
+            let logitech_data: LogitechData = decoded.to_json().unwrap();
+            (
+                logitech_data.applications.applications,
+                logitech_data.profiles.profiles,
+            )
+        } else {
+            // maybe show a warning?
+            (vec![], vec![])
+        };
         let keybinds = gprofiles_data.keybinds.unwrap_or_default();
 
         Self {

@@ -1,32 +1,22 @@
 use image::{DynamicImage, ImageReader};
 use rfd::FileDialog;
-use rusqlite::Connection;
+use rusqlite::{Connection, types::FromSql};
 use serde::{Deserialize, Serialize};
 use slint::{Image, SharedPixelBuffer};
-use std::path;
+use std::{io, path};
 
 pub const APPLICATION_NAME_DESKTOP: &str = "APPLICATION_NAME_DESKTOP";
 pub const PROFILE_NAME_DEFAULT: &str = "PROFILE_NAME_DEFAULT";
 pub const BROKEN_IMAGE_ICON: &[u8; 4275] = include_bytes!("../assets/broken_image.png");
 pub const DESKTOP_ICON: &[u8; 3251] = include_bytes!("../assets/desktop.png");
 
-pub fn parse_json<T: Serialize + for<'de> Deserialize<'de>>(file: &path::Path) -> T {
-    let data: String;
-    if file.extension() == Some("json".as_ref()) {
-        data = std::fs::read_to_string(file).expect("Failed to read JSON file.");
-    } else if file.extension() == Some("db".as_ref()) {
-        let conn = Connection::open(file).expect("Failed to open database file.");
-        let mut stmt = conn.prepare("SELECT file FROM data;").unwrap();
-        let row: Vec<u8> = stmt.query_row([], |row| Ok(row.get(0)?)).unwrap();
-        drop(stmt);
-        conn.close().unwrap();
-        data = String::from_utf8(row).expect("Failed to convert database data to string.");
-    } else {
-        // TODO: better error handling
-        panic!("Unsupported file format for JSON parsing.");
-    }
-
-    serde_json::from_str::<T>(&data).expect("Failed to parse JSON data.")
+pub fn get_row<T: FromSql>(database: &path::Path, table: &str, row: &str) -> rusqlite::Result<T> {
+    let conn = Connection::open(database)?;
+    let mut stmt = conn.prepare(format!("SELECT {} FROM {};", row, table).as_str())?;
+    let row: T = stmt.query_row([], |row| Ok(row.get(0)?))?;
+    drop(stmt);
+    conn.close().unwrap();
+    Ok(row)
 }
 
 pub fn file_picker(name: &str, ext: &[&str], dir: Option<&path::Path>) -> Option<path::PathBuf> {
@@ -39,6 +29,10 @@ pub fn file_picker(name: &str, ext: &[&str], dir: Option<&path::Path>) -> Option
 
 pub trait Cast<T> {
     fn using(value: T) -> Self;
+}
+
+pub trait Serializable<T: Serialize + for<'de> Deserialize<'de>> {
+    fn to_json(&self) -> io::Result<T>;
 }
 
 impl Cast<DynamicImage> for Image {
@@ -69,5 +63,24 @@ impl Cast<&path::Path> for Image {
 impl Cast<path::PathBuf> for Image {
     fn using(value: path::PathBuf) -> Self {
         Image::using(value.as_path())
+    }
+}
+
+impl<T: Serialize + for<'de> Deserialize<'de>> Serializable<T> for &path::Path {
+    fn to_json(&self) -> io::Result<T> {
+        let data = std::fs::read_to_string(self)?;
+        Ok(serde_json::from_str::<T>(&data)?)
+    }
+}
+
+impl<T: Serialize + for<'de> Deserialize<'de>> Serializable<T> for path::PathBuf {
+    fn to_json(&self) -> io::Result<T> {
+        self.as_path().to_json()
+    }
+}
+
+impl<T: Serialize + for<'de> Deserialize<'de>> Serializable<T> for String {
+    fn to_json(&self) -> io::Result<T> {
+        Ok(serde_json::from_str::<T>(&self)?)
     }
 }
