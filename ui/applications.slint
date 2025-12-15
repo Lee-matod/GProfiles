@@ -15,6 +15,7 @@ export component ApplicationCard inherits Rectangle {
     height: 200px;
     background: area.has-hover ? Color.secondary : Color.tertiary;
     border-radius: Dimensions.medium;
+    clip: true;
 
     animate background { duration: 150ms; }
 
@@ -41,7 +42,7 @@ export component ApplicationCard inherits Rectangle {
         overflow: elide;
     }
 
-    if !((application.executable.is-empty && application.type == ApplicationType.installed) || application.has-icon): Image {
+    if !((application.executable.is-empty && application.type == ApplicationType.installed) && !application.has-icon): Image {
         width: application.type == ApplicationType.installed && application.has-icon ? parent.width : 48px;
         height: application.type == ApplicationType.installed && application.has-icon ? parent.height : 48px;
         source: application.icon;
@@ -53,7 +54,7 @@ export component ApplicationCard inherits Rectangle {
 
         Text {
             text: "NOT INSTALLED";
-            color: Color.primary;
+            color: Color.primary-accent;
             font-weight: Dimensions.font-bold;
         }
     }
