@@ -13,7 +13,7 @@ image = "0.25.8"
 rusqlite = { version = "0.37.0", features = ["serde_json", "bundled"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
-slint = "1.14.1"
+slint = { version = "1.14.1", features = ["renderer-skia"] }
 reqwest = { version = "0.12.24", features = ["blocking"] }
 uuid = { version = "1.18.1", features = ["v4", "fast-rng"] }
 
