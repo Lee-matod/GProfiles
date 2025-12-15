@@ -1,4 +1,10 @@
-import { ApplicationModel, ApplicationType, Color, Dimensions, Singleton } from "objects.slint";
+import {
+    ApplicationModel,
+    ApplicationType,
+    Color,
+    Dimensions,
+    Singleton,
+} from "objects.slint";
 import { ScrollView } from "std-widgets.slint";
 
 export component ApplicationCard inherits Rectangle {
@@ -35,19 +41,20 @@ export component ApplicationCard inherits Rectangle {
         overflow: elide;
     }
 
-    Image {
+    if !((application.executable.is-empty && application.type == ApplicationType.installed) || application.has-icon): Image {
         width: application.type == ApplicationType.installed && application.has-icon ? parent.width : 48px;
         height: application.type == ApplicationType.installed && application.has-icon ? parent.height : 48px;
         source: application.icon;
-        colorize: application.type == ApplicationType.installed && application.executable.is-empty ? #00000000 : Color.foreground;
+        colorize: application.has-icon ? #00000000 : Color.foreground;
     }
 
     if application.executable == "" && application.type == ApplicationType.installed: Rectangle {
-        background: #00000050;
+        background: #00000090;
 
         Text {
             text: "NOT INSTALLED";
             color: Color.primary;
+            font-weight: Dimensions.font-bold;
         }
     }
 

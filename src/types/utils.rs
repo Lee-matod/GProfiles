@@ -68,7 +68,7 @@ impl Component<ApplicationModel> for Application {
                     (
                         ApplicationType::Desktop,
                         SharedString::new(),
-                        true,
+                        false,
                         icon,
                         SharedString::from("Desktop"),
                     )
